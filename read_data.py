@@ -2,14 +2,14 @@
 
 import MySQLdb
 import networkx as nx
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import os
 import time
 
 class YelpData:
 
     def __init__(self):
-        self.db = MySQLdb.connect("quantum2.is.cityu.edu.hk.", "readyelp", "yelp2018", "yelp")
+        self.db = MySQLdb.connect("quantum2.is.cityu.edu.hk.", "readyelp", "yelp2018", "yelp", charset="utf8")
         self.cursor = self.db.cursor()
 
     def read_reviews(self):
@@ -67,9 +67,9 @@ class YelpData:
             graph_urp.add_edge(review_id, reviewer_id)
             graph_urp.add_edge(review_id, bussiness_id)
 
-        nx.draw(graph_urp)
-        plt.savefig('pic/test_graph.png')
-        plt.show()
+        # nx.draw(graph_urp)
+        # plt.savefig('pic/test_graph.png')
+        # plt.show()
         # graph_urp.add_node()
 
     def construct_network_urp(self):
@@ -82,7 +82,8 @@ class YelpData:
         read_unit = 1000
         rest_sum = row_sum-row_sum/read_unit*read_unit
 
-        graph_urp = nx.Graph()
+        # if no record point, create a new graph
+        # graph_urp = nx.Graph()
 
         # read pickle if need to recover, otherwise comment the next 2 lines
         record_point = 622
