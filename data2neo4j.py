@@ -26,7 +26,7 @@ class Neo4jGraph():
         # row_sum = 10
         read_unit = 100
         rest_sum = row_sum - row_sum / read_unit * read_unit
-        record_point = 2878
+        record_point = 2971
 
         for i in range(record_point, row_sum/read_unit+1):
             # reviews = YD.read_reviews_limit(1, 10)

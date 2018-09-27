@@ -39,9 +39,26 @@ class YelpData:
         print reviews_sql
         self.cursor.execute(reviews_sql)
         data = self.cursor.fetchall()
-        # for single_data in data:
-        #     print single_data
         return data
+
+    def read_friends_limit(self, num, limit):
+        friends_sql = "select * from friends limit %d, %d" % (num, limit)
+        print friends_sql
+        self.cursor.execute(friends_sql)
+        data = self.cursor.fetchall()
+        return data
+
+    def determine_spammer(self, reviewer_id):
+        # whether the reviewer is a spammer
+        fake_sql = "select * from reviews where reviewerID = '%s' and fake = 1" % reviewer_id
+        # print fake_sql
+        self.cursor.execute(fake_sql)
+        data = self.cursor.fetchall()
+        # if len(data) == 0:
+        #     print "not spammer"
+        # else:
+        #     print "spammer"
+        # return data
 
     def construct_network_test(self):
         # user-review-product
@@ -87,7 +104,7 @@ class YelpData:
 
         # read pickle if need to recover, otherwise comment the next 2 lines
         record_point = 622
-        graph_urp = nx.read_gpickle("graph/test_%d.pickle" % (record_point*1000))
+        graph_urp = nx.read_gpickle("graph/test_%d.pickle" % (record_point * read_unit))
 
         for i in range(record_point, row_sum/read_unit+1):
         # for i in range(1, 10):
@@ -128,7 +145,7 @@ class YelpData:
             # nx.write_gexf(graph_urp, "graph/test1.gexf")
 
             # write pickle
-            nx.write_gpickle(graph_urp, "graph/test_%d.pickle" % ((i+1)*read_unit))
+            nx.write_gpickle(graph_urp, "graph/friendship_%d.pickle" % ((i+1)*read_unit))
             print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
             # delete the old pickle
             if i != 0:
@@ -138,19 +155,63 @@ class YelpData:
         # plt.savefig('pic/test_graph.png')
         # plt.show()
 
-
     def construct_network_friendship(self):
-        pass
+        # define limit, offset, rest
+        row_sum = 925091
+        read_unit = 100
+        rest_sum = row_sum - row_sum / read_unit * read_unit
 
+
+
+        record_point = 0
+        if record_point != 0:
+            # read pickle if need to recover, otherwise comment the next 2 lines
+            graph_friendship = nx.read_gpickle("graph/test_%d.pickle" % (record_point * read_unit))
+        else:
+            # if no record point, create a new graph
+            graph_friendship = nx.Graph()
+
+        for i in range(record_point, row_sum / read_unit + 1):
+            # for i in range(1, 10):
+
+            if i == row_sum / read_unit:
+                print 925091
+                friendships = self.read_friends_limit(i * read_unit, rest_sum)
+            else:
+                print (i + 1) * read_unit
+                friendships = self.read_friends_limit(i * read_unit, read_unit)
+
+            for friendship in friendships:
+                reviewerID_0 = friendship[0]
+                reviewerID_1 = friendship[1]
+
+                # fake_0 = self.determine_spammer(reviewerID_0)
+                # fake_1 = self.determine_spammer(reviewerID_1)
+
+                # graph_friendship.add_node(reviewerID_0, reviewerID=reviewerID_0, spammer=fake_0)
+                # graph_friendship.add_node(reviewerID_1, reviewerID=reviewerID_1, spammer=fake_1)
+                graph_friendship.add_node(reviewerID_0, reviewerID=reviewerID_0)
+                graph_friendship.add_node(reviewerID_1, reviewerID=reviewerID_1)
+                graph_friendship.add_edge(reviewerID_0, reviewerID_1)
+
+            nx.write_gpickle(graph_friendship, "graph/friendship_%d.pickle" % ((i + 1) * read_unit))
+            print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+            # delete the old pickle
+            if i != 0:
+                os.remove("graph/friendship_%s.pickle" % str(i * read_unit))
 
     def read_graph(self, path):
         graph = nx.read_gpickle(path)
         return graph
         # graph = nx.read_gexf(path)
         # return graph
+
+
 if __name__ == "__main__":
     YD = YelpData()
-    YD.construct_network_urp()
+    # YD.construct_network_urp()
+    # YD.determine_spammer('wwjSNPlPDONJ7sOAwXkftA')
+    YD.construct_network_friendship()
 
     # graph = YD.read_graph("graph/test1.pickle")
     # for node in graph.nodes():
