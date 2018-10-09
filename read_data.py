@@ -243,7 +243,7 @@ class YelpData:
                 # without fake lable
                 # graph_friendship.add_node(reviewerID_0, reviewerID=reviewerID_0)
                 # graph_friendship.add_node(reviewerID_1, reviewerID=reviewerID_1)
-                # graph_friendship.add_edge(reviewerID_0, reviewerID_1)
+                graph_friendship.add_edge(reviewerID_0, reviewerID_1)
 
             nx.write_gpickle(graph_friendship, "graph/friendship_attr_order_%d.pickle" % ((i + 1) * read_unit))
             print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
