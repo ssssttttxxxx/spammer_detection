@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import networkx as nx
-import MySQLdb
+# import MySQLdb
+import time
 
 
 class CalculateCentrality:
@@ -12,8 +13,8 @@ class CalculateCentrality:
         self.non_spammer_graph = nx.read_gpickle(self.non_spammer_graph_path)
 
         # init mysql
-        self.db = MySQLdb.connect("localhost", "root", "stx11stx11", "yelp_data", charset="utf8")
-        self.cursor = self.db.cursor()
+        # self.db = MySQLdb.connect("localhost", "root", "stx11stx11", "yelp_data", charset="utf8")
+        # self.cursor = self.db.cursor()
 
     # def __del__(self):
     #     self.cursor.commit()
@@ -24,7 +25,7 @@ class CalculateCentrality:
         print self.non_spammer_graph.number_of_nodes()
         print self.non_spammer_graph.number_of_edges()
 
-    def centrality(self):
+    def degree_centrality(self):
 
         insert_item_list = list()
 
@@ -42,6 +43,23 @@ class CalculateCentrality:
 
         # all_node_degree_centrality = nx.degree_centrality(self.spammer_graph)
 
+    def betweeness_centrality(self):
+
+        # for num, node in enumerate(self.spammer_graph.nodes()):
+        #     if num == 2:
+        #         break
+        #     print self.spammer_graph.betweeness(node)
+        print "begin betweenness cal", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        all_node_betweenness = nx.betweenness_centrality(self.spammer_graph)
+        print "end betweenness cal", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+
+        for iter, item in enumerate(all_node_betweenness):
+            if iter == 2:
+                break
+            print iter
+            print item
+
+
     def insert_degree_centrality(self, params):
         """
         :param ids: list of id
@@ -54,6 +72,7 @@ class CalculateCentrality:
 
 if __name__ == '__main__':
     CC = CalculateCentrality()
-    # CC.summary()
+    CC.summary()
 
-    CC.centrality()
+    # CC.degree_centrality()
+    CC.betweeness_centrality()
