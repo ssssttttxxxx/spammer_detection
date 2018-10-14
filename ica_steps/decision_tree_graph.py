@@ -4,7 +4,9 @@ import sklearn
 import networkx as nx
 import graphviz
 
-graph_path = 'graph/friendship_attr_total_cleanUnknown_cleanDegree0.pickle'
+
+print nx.__version__
+graph_path = 'graph/friendship_attr_total_cleanUnknown.pickle'
 graph_label_path = 'friendship_graph/friendship_925100.pickle'
 graph = nx.read_gpickle(graph_path)
 
@@ -55,3 +57,27 @@ if __name__ == "__main__":
     dot_data = tree.export_graphviz(clf, out_file=None)
     decision_tree_graph = graphviz.Source(dot_data)
     decision_tree_graph.render("decision_tree_result/example")
+
+def compute_attribute(current_graph, classifier):
+    for node in current_graph.nodes():
+        neighbors = current_graph.neighbors(node)
+        number_of_spammers = 0
+        number_of_non_spammers = 0
+
+        for neighbor in neighbors:
+            if current_graph.node[neighbor]['fake'] == 1:
+                number_of_spammers += 1
+            elif current_graph.node[neighbor]['fake'] == 0:
+                number_of_non_spammers += 1
+
+        current_graph.node[node]['spammer_neighbors_num'] = number_of_spammers
+        current_graph.node[node]['non_spammer_neighbors_num'] = number_of_non_spammers
+
+        """
+        Then classifier predict the label of the current node
+        """
+        node_attr = list()
+        for val in current_graph.node[node].values():
+            node_attr.append(val)
+
+        lable = classifier.predict(node_attr)[0][0]

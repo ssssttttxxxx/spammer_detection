@@ -10,6 +10,7 @@ def split_tarinset_testset(graph_path):
     Y_list = list()
     for i, node in enumerate(graph.nodes()):
         temp_list = list()
+        print graph.node[node]
         for attr_name, val in graph.node[node]:
             if attr_name == 'fake':  # fake即为label值
                 Y_list.append(val)
@@ -24,6 +25,7 @@ def split_tarinset_testset(graph_path):
 if __name__ == "__main__":
 
     X, y = np.arange(10).reshape((5, 2)), range(5)
+    print X, y
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4)
     print X_train
     print y_train

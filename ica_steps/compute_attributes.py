@@ -32,7 +32,6 @@ def compute_attribute(current_graph, classifier):
         for val in current_graph.node[node].values():
             node_attr.append(val)
 
-        lable = classifier.predict(node_attr)[0][0]
-
-        # print current_graph.node[node]
+        label = classifier.predict(node_attr)[0][0]
+        current_graph.node[node]['fake'] = label
 
