@@ -5,11 +5,13 @@ import networkx as nx
 import os
 import time
 
-class ReadFriendshipGraph():
-
+class ReadFriendshipGraph:
+    """
+    This class include the label funciton (为网络中的节点添加标签)
+    """
     def __init__(self):
         print "begin init", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        self.graph_path = 'friendship_graph/friendship_925100.pickle'
+        self.graph_path = 'friendship_graph/friendship_attr_925100.pickle'
         self.friendship_graph = nx.read_gpickle(self.graph_path)
         # self.db = MySQLdb.connect("quantum2.is.cityu.edu.hk.", "readyelp", "yelp2018", "yelp", charset="utf8")
         self.db = MySQLdb.connect("localhost", "root", "stx11stx11", "yelp_data", charset="utf8")
@@ -26,6 +28,7 @@ class ReadFriendshipGraph():
         return graph
 
     def determine_spammer(self, reviewer_id):
+
         """
         whether the reviewer is a spammer
         :param reviewer_id:
@@ -43,6 +46,10 @@ class ReadFriendshipGraph():
             return 1
 
     def label_users(self):
+        """
+        label the user with fake, which means that whether a user is a spammer
+        :return:
+        """
         record_unit = 1000
         print self.friendship_graph.number_of_nodes()
         print self.friendship_graph.number_of_edges()
@@ -54,11 +61,11 @@ class ReadFriendshipGraph():
             if num % record_unit == 0:
                 print num
                 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-                nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label%d.pickle" % num)
+                nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label_attr%d.pickle" % num)
                 if num != 0:
-                    os.remove("graph/friendship_reviewer_label%d.pickle" % (num-record_unit))
+                    os.remove("graph/friendship_reviewer_label_attr%d.pickle" % (num-record_unit))
 
-        nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label%d.pickle" % num)
+        nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label_attr%d.pickle" % num)
 
 
     def create_temporary_test(self):

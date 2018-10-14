@@ -6,7 +6,7 @@ import time
 for network/graph with nodes do not in the database, remove them from the network/graph.
 """
 
-graph_path = 'graph/friendship_reviewer_label_attr_clean_unknown.pickle'
+graph_path = 'graph/friendship_reviewer_label_attr771487.pickle'
 graph = nx.read_gpickle(graph_path)
 
 remove_list = list()
@@ -16,9 +16,10 @@ for iter, node in enumerate(list(graph.nodes())):
 
     flag = graph.node[node]['friends_num']
 
-    if graph.degree(node) == 0:
-        # print graph.degree(node)
+    if flag == 'unknown':
+        # graph.remove_node(node)
         remove_list.append(node)
+
     if iter % 1000 == 0:
         print iter, len(remove_list)
         print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -29,5 +30,5 @@ for iter, node in enumerate(list(graph.nodes())):
 
 for node in remove_list:
     graph.remove_node(node)
-print iter
-nx.write_gpickle(graph, 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle')
+
+nx.write_gpickle(graph, 'graph/friendship_reviewer_label_attr_clean_unknown.pickle')
