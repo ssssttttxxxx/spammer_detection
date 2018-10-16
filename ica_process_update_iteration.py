@@ -46,7 +46,7 @@ def split_tarinset_testset(graph, attributes):
         # print temp_list
         X_list.append(temp_list)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=0.8, random_state=shuffle_stat)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=0.2, random_state=shuffle_stat)
     # print X_train
     # print y_train
     # print X_test
@@ -112,8 +112,9 @@ for l in X_train:
 # train
 X_train_without_id = [node[1:] for node in X_train]
 # check attributes order in list
-print X_train_without_id[0]
-print X_train[0]
+# print X_train_without_id[0]
+# print X_train[0]
+
 print "training classifier"
 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -135,11 +136,14 @@ pickle.dump(classifier, open(filename, 'wb'))
 
 Y_all_predict = list()  # include all the label prediction of each iteration
 
+next_graph = current_graph.copy()
 
 for iteration in range(iterations):
     print 'iteration', iteration
     Y_predict = list()
     random.Random(iteration).shuffle(X_test)
+    if iteration > 0:
+        current_graph = next_graph.copy()
     # random.shuffle(X_test)
     for X_single in X_test:
         X = copy.deepcopy(X_single)
@@ -161,9 +165,9 @@ for iteration in range(iterations):
         Y_predict.append(int(label_predict))
 
         # update
-        current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
-        current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
-        current_graph.node[node_id]['fake'] = label_predict
+        next_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
+        next_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
+        next_graph.node[node_id]['fake'] = label_predict
         # print current_graph.node[node_id]
     print "iAccuracy is ", accuracy_score(Y_test, Y_predict) * 100
 
