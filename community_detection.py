@@ -4,6 +4,7 @@ import community
 import networkx as nx
 import matplotlib.pyplot as plt
 
+print nx.__version__
 print community.__version__
 
 graph_path = 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle'
@@ -12,7 +13,7 @@ graph = nx.read_gpickle(graph_path)
 # part = community.best_partition(graph)
 # 计算模块度
 # mod = community.modularity(part,graph)
-#绘图
+# 绘图
 
 # values = [part.get(node) for node in graph.nodes()]
 # nx.draw_spring(graph, cmap=plt.get_cmap('jet'), node_color=values, node_size=30, with_labels=False)
@@ -21,7 +22,9 @@ graph = nx.read_gpickle(graph_path)
 k = 3
 print 'community detecting'
 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-partitions_generator = nx.algorithms.community.k_clique_communities(graph,k)
+# partitions_generator = nx.algorithms.community.k_clique_communities(graph, k)
+partitions_generator = nx.algorithms.community.label_propagation_communities(graph)
+
 
 print 'finished'
 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))

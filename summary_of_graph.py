@@ -2,13 +2,24 @@
 import networkx as nx
 
 if __name__ == "__main__":
-    graph_path = 'friendship_graph/friendship_925100.pickle'
-    graph_attr_path = 'friendship_graph/friendship_attr_925100.pickle'
+    graph_path = 'graph/separate_spammer_771487.pickle'
+    graph_attr_path = 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle'
     friendship_graph = nx.read_gpickle(graph_path)
     friendship_graph_attr = nx.read_gpickle(graph_attr_path)
-    print "friendship"
+    print "clean unknown"
     print friendship_graph.number_of_nodes()
     print friendship_graph.number_of_edges()
-    print "friendship_attr"
+    print "clean unknown and degree_0"
     print friendship_graph_attr.number_of_nodes()
     print friendship_graph_attr.number_of_edges()
+
+    num_spammer = 0
+    num_normal = 0
+    for n in friendship_graph_attr:
+        if friendship_graph_attr.node[n]['fake'] == 1:
+            num_spammer += 1
+        elif friendship_graph_attr.node[n]['fake'] == 0:
+            num_normal += 1
+
+    print "spammers", num_spammer
+    print 'normal', num_normal

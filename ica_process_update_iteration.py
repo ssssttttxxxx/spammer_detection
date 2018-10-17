@@ -9,14 +9,17 @@ import networkx as nx
 from sklearn import tree
 from collections import Counter
 from collections import defaultdict
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 
+# configure
+run_times = 10
+test_size = 0.2
 iterations = 10
-shuffle_stat = 117
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photos_num']
-# attributes_name = ['reviewerID',]
+shuffle_stat = 42
+# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photos_num']
+attributes_name = ['reviewerID', ]
 
 
 #  divide data by training set and test set
@@ -42,11 +45,9 @@ def split_tarinset_testset(graph, attributes):
             elif attr_name == 'fake':
                 Y_list.append(val)
 
-
-        # print temp_list
         X_list.append(temp_list)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=0.2, random_state=shuffle_stat)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=test_size, random_state=shuffle_stat)
     # print X_train
     # print y_train
     # print X_test
@@ -138,10 +139,13 @@ Y_all_predict = list()  # include all the label prediction of each iteration
 
 next_graph = current_graph.copy()
 
+
 for iteration in range(iterations):
     print 'iteration', iteration
     Y_predict = list()
     random.Random(iteration).shuffle(X_test)
+    random.Random(iteration).shuffle(Y_test)
+
     if iteration > 0:
         current_graph = next_graph.copy()
     # random.shuffle(X_test)
@@ -156,13 +160,9 @@ for iteration in range(iterations):
         X.append(number_of_spammers)
         X.append(number_of_non_spammers)
         # print X[1:]
-        try:
-            label_predict = classifier.predict([X[1:]])
-        except:
-            print X[1:]
-            print current_graph.node[node_id]
-            exit(1)
-        Y_predict.append(int(label_predict))
+
+        label_predict = classifier.predict([X[1:]])
+        Y_predict.append(label_predict)
 
         # update
         next_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
@@ -170,28 +170,24 @@ for iteration in range(iterations):
         next_graph.node[node_id]['fake'] = label_predict
         # print current_graph.node[node_id]
     print "iAccuracy is ", accuracy_score(Y_test, Y_predict) * 100
+    print "f1 macro is", f1_score(Y_test, Y_predict, average='macro')
+    print "f1 micro is", f1_score(Y_test, Y_predict, average='micro')
 
-    if iteration > 0:
-        if Y_predict == Y_all_predict[-1]:
-            print "same"
-        else:
-            print "not same"
-    Y_all_predict.append(Y_predict)
 # print Y_predict
 # print Y_test
 
 
 # calculate the frequency and final label
-all_node_label = list()
-for i in range(len(Y_test)):
-    node_label = list()
-    for j in range(iterations):
-        node_label.append(int(Y_all_predict[j][i]))
-    all_node_label.append(node_label)
-
-final_labels = list()
-for node_label in all_node_label:
-    most_common_label, num_most_common = Counter(node_label).most_common(1)[0]
-    final_labels.append(most_common_label)
-
-print "Accuracy is ", accuracy_score(Y_test, final_labels)*100
+# all_node_label = list()
+# for i in range(len(Y_test)):
+#     node_label = list()
+#     for j in range(iterations):
+#         node_label.append(int(Y_all_predict[j][i]))
+#     all_node_label.append(node_label)
+#
+# final_labels = list()
+# for node_label in all_node_label:
+#     most_common_label, num_most_common = Counter(node_label).most_common(1)[0]
+#     final_labels.append(most_common_label)
+#
+# print "Accuracy is ", accuracy_score(Y_test, final_labels)*100

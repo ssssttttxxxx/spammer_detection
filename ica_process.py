@@ -7,21 +7,24 @@ import pickle
 import graphviz
 import networkx as nx
 from sklearn import tree
+from sklearn.utils import shuffle
 from collections import Counter
 from collections import defaultdict
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 
+# configure
+run_times = 1
+test_size = 0.5
 iterations = 10
-shuffle_stat = 117
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photos_num']
-# attributes_name = ['reviewerID',]
+shuffle_stat = 42
+# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photos_num']
+attributes_name = ['reviewerID', ]
 
 
 #  divide data by training set and test set
-def split_tarinset_testset(graph, attributes):
-
+def split_trainset_testset(graph, attributes):
     print "split train set and test set "
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -30,27 +33,18 @@ def split_tarinset_testset(graph, attributes):
     for i, node in enumerate(graph.nodes()):
         temp_list = list()
         for attr_name, val in graph.node[node].items():
-            # if attr_name == 'fake':  # fake即为label值
-            #     Y_list.append(val)
-            # # elif attr_name == 'reviewerName' or attr_name == 'location' or attr_name == 'reviewerID':
-            # elif attr_name == 'reviewerName' or attr_name == 'location':
-            #     continue
-            # else:
-            #     temp_list.append(val)
+
             if attr_name in attributes:
                 temp_list.append(val)
             elif attr_name == 'fake':
                 Y_list.append(val)
 
-
         # print temp_list
         X_list.append(temp_list)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=0.8, random_state=shuffle_stat)
-    # print X_train
-    # print y_train
-    # print X_test
-    # print y_test
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=test_size, random_state=shuffle_stat)
+    # X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=test_size)
+
     return X_train, X_test, Y_train, Y_test
 
 
@@ -62,6 +56,7 @@ def remove_test_label(graph, delete_list):
     current_graph = graph.copy()
     for node in delete_list:
         current_graph.node[node[0]]['fake'] = 'unknown'
+        # print 'remove label of %s' % node[0]
     return current_graph
 
 
@@ -84,110 +79,109 @@ def compute_attribute(current_graph, node):
 # start
 graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
 graph = nx.read_gpickle(graph_path)
-
-# split
-X_train, X_test, Y_train, Y_test = split_tarinset_testset(graph, attributes_name)
-
-# check attributes
-# print X_train[0]
-# print graph.node[X_train[0][0]]
-
-# remove label of nodes in test set
-current_graph = remove_test_label(graph, X_test)
-
-# compute relational attributes
-print "computing the relational attributes"
-print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-for l in X_train:
-    node_id = l[0]
-    number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
-    if current_graph.node[node_id].get('spammer_neighbors_num'):
-        print "??", current_graph.node[node_id]
-    current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
-    current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
-    l.append(number_of_spammers)
-    l.append(number_of_non_spammers)
+macro_sum = 0
+micro_sum = 0
+recall_sum = 0
 
 
-# train
-X_train_without_id = [node[1:] for node in X_train]
-# check attributes order in list
-print X_train_without_id[0]
-print X_train[0]
-print "training classifier"
-print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-classifier = tree.DecisionTreeClassifier(criterion="entropy")
-classifier.fit(X_train_without_id, Y_train)
+for round in range(run_times):
+    # split
+    X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
+    print 'training set', len(X_train)
+    print 'test set', len(X_test)
 
-# visualize and store decision tree
-# tree_data = tree.export_graphviz(classifier, out_file=None)
-# tree_graph = graphviz.Source(tree_data)
-# tree_graph.render("decision_tree_result/spammer_decision")
+    # check attributes
+    # print X_train[0]
+    # print graph.node[X_train[0][0]]
 
-print "complete training"
-print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # remove label of nodes in test set
+    current_graph = remove_test_label(graph, X_test)
 
-filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
-pickle.dump(classifier, open(filename, 'wb'))
-
-# predict the label of unkonwn node
-
-Y_all_predict = list()  # include all the label prediction of each iteration
-
-
-for iteration in range(iterations):
-    print 'iteration', iteration
-    Y_predict = list()
-    random.Random(iteration).shuffle(X_test)
-    # random.shuffle(X_test)
-    for X_single in X_test:
-        X = copy.deepcopy(X_single)
-        node_id = X[0]
-        # print X
-        # print node_id
-
-        # compute attributes
+    # compute relational attributes using only known nodes
+    print "computing the relational attributes"
+    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    zero_zero_num = 0
+    for l in X_train:
+        node_id = l[0]
         number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
-        X.append(number_of_spammers)
-        X.append(number_of_non_spammers)
-        # print X[1:]
-        try:
-            label_predict = classifier.predict([X[1:]])
-        except:
-            print X[1:]
-            print current_graph.node[node_id]
-            exit(1)
-        Y_predict.append(int(label_predict))
+        if current_graph.node[node_id].get('spammer_neighbors_num'):
+            print "??", current_graph.node[node_id]
+        if number_of_non_spammers == 0 and number_of_spammers == 0:
+            zero_zero_num += 1
 
-        # update
         current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
         current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
-        current_graph.node[node_id]['fake'] = label_predict
-        # print current_graph.node[node_id]
-    print "iAccuracy is ", accuracy_score(Y_test, Y_predict) * 100
+        l.append(number_of_spammers)
+        l.append(number_of_non_spammers)
+    print 'node 0-0:', zero_zero_num
 
-    if iteration > 0:
-        if Y_predict == Y_all_predict[-1]:
-            print "same"
-        else:
-            print "not same"
-    Y_all_predict.append(Y_predict)
-# print Y_predict
-# print Y_test
+    # train
+    X_train_without_id = [node[1:] for node in X_train]
 
+    # check attributes order in list
+    # print X_train_without_id[0]
+    # print X_train[0]
+
+    print "training classifier"
+    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+
+    classifier = tree.DecisionTreeClassifier(criterion="entropy")
+    classifier.fit(X_train_without_id, Y_train)
+
+    print "complete training"
+    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+
+    filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
+    pickle.dump(classifier, open(filename, 'wb'))
+
+    # predict the label of unknown node
+    Y_all_predict = defaultdict(list)  # include all the label prediction of each iteration
+
+    specific_node = X_test[0][0]
+    for iteration in range(iterations):
+        print 'iteration', iteration
+        Y_predict = list()
+        X_test, Y_test = shuffle(X_test, Y_test, random_state=iteration)
+
+        for X_single in X_test:
+            X = copy.deepcopy(X_single)
+            node_id = X[0]
+
+            if node_id == specific_node:
+                print current_graph.node[node_id]
+                neighbors = current_graph.neighbors(node_id)
+                for neighbor in neighbors:
+                    print 'neighbor', current_graph.node[neighbor]
+
+            # compute attributes
+            number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+            X.append(number_of_spammers)
+            X.append(number_of_non_spammers)
+            if number_of_spammers == 0 and number_of_non_spammers == 0 and iteration > 0:
+                print 'what the fuck'
+            label_predict = classifier.predict([X[1:]])
+            Y_predict.append(int(label_predict))
+            Y_all_predict[X[0]].append(int(label_predict))
+            # update
+            current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
+            current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
+            current_graph.node[node_id]['fake'] = int(label_predict)
+            # print current_graph.node[node_id]
+    print "iPrecision is ", precision_score(Y_test, Y_predict, average='binary') * 100
+    micro = f1_score(Y_test, Y_predict, average='micro')
+    macro = f1_score(Y_test, Y_predict, average='macro')
+    recall_rate = recall_score(Y_test, Y_predict, average='binary') * 100
+    print "recall rate is ", recall_rate
+    print "f1 macro is", macro
+    print "f1 micro is", micro
+    recall_sum += recall_rate
+    macro_sum += macro
+    micro_sum += micro
+
+print 'average_recall:', recall_sum/run_times
+print 'average_macro:', macro_sum/run_times
+print 'average_micro:', micro_sum/run_times
 
 # calculate the frequency and final label
-all_node_label = list()
-for i in range(len(Y_test)):
-    node_label = list()
-    for j in range(iterations):
-        node_label.append(int(Y_all_predict[j][i]))
-    all_node_label.append(node_label)
-
-final_labels = list()
-for node_label in all_node_label:
-    most_common_label, num_most_common = Counter(node_label).most_common(1)[0]
-    final_labels.append(most_common_label)
-
-print "Accuracy is ", accuracy_score(Y_test, final_labels)*100
+# all_node_label = list()
