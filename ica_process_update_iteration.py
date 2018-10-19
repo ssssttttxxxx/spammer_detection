@@ -1,25 +1,21 @@
 # -*- coding: utf-8 -*-
-import os
 import time
 import copy
-import random
 import pickle
-import graphviz
 import networkx as nx
 from sklearn import tree
-from collections import Counter
+from sklearn.utils import shuffle
 from collections import defaultdict
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score
 from sklearn.model_selection import train_test_split
 
 # configure
 run_times = 10
-test_size = 0.2
+trainset_size = 0.5
 iterations = 10
 shuffle_stat = 42
-# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photos_num']
-attributes_name = ['reviewerID', ]
+attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
+# attributes_name = ['reviewerID', ]
 
 
 #  divide data by training set and test set
@@ -47,7 +43,7 @@ def split_tarinset_testset(graph, attributes):
 
         X_list.append(temp_list)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=test_size, random_state=shuffle_stat)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size, random_state=shuffle_stat)
     # print X_train
     # print y_train
     # print X_test
@@ -85,6 +81,9 @@ def compute_attribute(current_graph, node):
 # start
 graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
 graph = nx.read_gpickle(graph_path)
+macro_sum = 0
+micro_sum = 0
+recall_sum = 0
 
 # split
 X_train, X_test, Y_train, Y_test = split_tarinset_testset(graph, attributes_name)
@@ -112,9 +111,6 @@ for l in X_train:
 
 # train
 X_train_without_id = [node[1:] for node in X_train]
-# check attributes order in list
-# print X_train_without_id[0]
-# print X_train[0]
 
 print "training classifier"
 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -122,29 +118,17 @@ print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 classifier = tree.DecisionTreeClassifier(criterion="entropy")
 classifier.fit(X_train_without_id, Y_train)
 
-# visualize and store decision tree
-# tree_data = tree.export_graphviz(classifier, out_file=None)
-# tree_graph = graphviz.Source(tree_data)
-# tree_graph.render("decision_tree_result/spammer_decision")
-
 print "complete training"
 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
-pickle.dump(classifier, open(filename, 'wb'))
-
 # predict the label of unkonwn node
-
 Y_all_predict = list()  # include all the label prediction of each iteration
-
 next_graph = current_graph.copy()
-
 
 for iteration in range(iterations):
     print 'iteration', iteration
     Y_predict = list()
-    random.Random(iteration).shuffle(X_test)
-    random.Random(iteration).shuffle(Y_test)
+    X_test, Y_test = shuffle(X_test, Y_test, random_state=iteration)
 
     if iteration > 0:
         current_graph = next_graph.copy()
@@ -152,14 +136,11 @@ for iteration in range(iterations):
     for X_single in X_test:
         X = copy.deepcopy(X_single)
         node_id = X[0]
-        # print X
-        # print node_id
 
         # compute attributes
         number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
         X.append(number_of_spammers)
         X.append(number_of_non_spammers)
-        # print X[1:]
 
         label_predict = classifier.predict([X[1:]])
         Y_predict.append(label_predict)
@@ -168,26 +149,18 @@ for iteration in range(iterations):
         next_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
         next_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
         next_graph.node[node_id]['fake'] = label_predict
-        # print current_graph.node[node_id]
-    print "iAccuracy is ", accuracy_score(Y_test, Y_predict) * 100
-    print "f1 macro is", f1_score(Y_test, Y_predict, average='macro')
-    print "f1 micro is", f1_score(Y_test, Y_predict, average='micro')
 
-# print Y_predict
-# print Y_test
+    micro = f1_score(Y_test, Y_predict, average='micro')
+    macro = f1_score(Y_test, Y_predict, average='macro')
+    recall_rate = recall_score(Y_test, Y_predict, average='binary')
+    print "f1 macro is", macro
+    print "f1 micro is", micro
+    print "recall rate is", recall_rate
+    recall_sum += recall_rate
+    macro_sum += macro
+    micro_sum += micro
 
+# print 'average_recall:', recall_sum / run_times
+# print 'average_macro:', macro_sum / run_times
+# print 'average_micro:', micro_sum / run_times
 
-# calculate the frequency and final label
-# all_node_label = list()
-# for i in range(len(Y_test)):
-#     node_label = list()
-#     for j in range(iterations):
-#         node_label.append(int(Y_all_predict[j][i]))
-#     all_node_label.append(node_label)
-#
-# final_labels = list()
-# for node_label in all_node_label:
-#     most_common_label, num_most_common = Counter(node_label).most_common(1)[0]
-#     final_labels.append(most_common_label)
-#
-# print "Accuracy is ", accuracy_score(Y_test, final_labels)*100

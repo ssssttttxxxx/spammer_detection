@@ -1,32 +1,29 @@
 # -*- coding: utf-8 -*-
-import os
 import time
 import copy
-import random
 import pickle
-import graphviz
 import networkx as nx
 from sklearn import tree
 from sklearn.utils import shuffle
-from collections import Counter
 from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 
 # configure
-run_times = 1
-test_size = 0.5
+run_times = 5
+trainset_size = 0.8
+print 'training set size', trainset_size
 iterations = 10
 shuffle_stat = 42
-# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photos_num']
+# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
 attributes_name = ['reviewerID', ]
 
 
 #  divide data by training set and test set
 def split_trainset_testset(graph, attributes):
-    print "split train set and test set "
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # print "split train set and test set "
+    # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     X_list = list()
     Y_list = list()
@@ -42,16 +39,16 @@ def split_trainset_testset(graph, attributes):
         # print temp_list
         X_list.append(temp_list)
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=test_size, random_state=shuffle_stat)
-    # X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=test_size)
+    # X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size, random_state=shuffle_stat)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size)
 
     return X_train, X_test, Y_train, Y_test
 
 
 #  remove the test set label on the graph data
 def remove_test_label(graph, delete_list):
-    print "remove test set label"
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # print "remove test set label"
+    # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     current_graph = graph.copy()
     for node in delete_list:
@@ -84,29 +81,24 @@ micro_sum = 0
 recall_sum = 0
 
 
-
 for round in range(run_times):
     # split
     X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
     print 'training set', len(X_train)
     print 'test set', len(X_test)
 
-    # check attributes
-    # print X_train[0]
-    # print graph.node[X_train[0][0]]
-
     # remove label of nodes in test set
     current_graph = remove_test_label(graph, X_test)
 
     # compute relational attributes using only known nodes
-    print "computing the relational attributes"
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # print "computing the relational attributes"
+    # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
     zero_zero_num = 0
     for l in X_train:
         node_id = l[0]
         number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
         if current_graph.node[node_id].get('spammer_neighbors_num'):
-            print "??", current_graph.node[node_id]
+            print "some thing wrong with relational attributes", current_graph.node[node_id]
         if number_of_non_spammers == 0 and number_of_spammers == 0:
             zero_zero_num += 1
 
@@ -120,17 +112,15 @@ for round in range(run_times):
     X_train_without_id = [node[1:] for node in X_train]
 
     # check attributes order in list
-    # print X_train_without_id[0]
-    # print X_train[0]
 
-    print "training classifier"
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # print "training classifier"
+    # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     classifier = tree.DecisionTreeClassifier(criterion="entropy")
     classifier.fit(X_train_without_id, Y_train)
 
-    print "complete training"
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # print "complete training"
+    # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
     pickle.dump(classifier, open(filename, 'wb'))
@@ -143,23 +133,22 @@ for round in range(run_times):
         print 'iteration', iteration
         Y_predict = list()
         X_test, Y_test = shuffle(X_test, Y_test, random_state=iteration)
-
         for X_single in X_test:
             X = copy.deepcopy(X_single)
             node_id = X[0]
 
-            if node_id == specific_node:
-                print current_graph.node[node_id]
-                neighbors = current_graph.neighbors(node_id)
-                for neighbor in neighbors:
-                    print 'neighbor', current_graph.node[neighbor]
+            # if node_id == specific_node:
+            #     print current_graph.node[node_id]
+            #     neighbors = current_graph.neighbors(node_id)
+            #     for neighbor in neighbors:
+            #         print 'neighbor', current_graph.node[neighbor]
 
             # compute attributes
             number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
             X.append(number_of_spammers)
             X.append(number_of_non_spammers)
             if number_of_spammers == 0 and number_of_non_spammers == 0 and iteration > 0:
-                print 'what the fuck'
+                print 'some thing wrong'
             label_predict = classifier.predict([X[1:]])
             Y_predict.append(int(label_predict))
             Y_all_predict[X[0]].append(int(label_predict))
@@ -167,11 +156,10 @@ for round in range(run_times):
             current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
             current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
             current_graph.node[node_id]['fake'] = int(label_predict)
-            # print current_graph.node[node_id]
-    print "iPrecision is ", precision_score(Y_test, Y_predict, average='binary') * 100
+
     micro = f1_score(Y_test, Y_predict, average='micro')
     macro = f1_score(Y_test, Y_predict, average='macro')
-    recall_rate = recall_score(Y_test, Y_predict, average='binary') * 100
+    recall_rate = recall_score(Y_test, Y_predict, average='binary')
     print "recall rate is ", recall_rate
     print "f1 macro is", macro
     print "f1 micro is", micro
