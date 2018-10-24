@@ -10,16 +10,16 @@ from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
+
 # configure
 run_times = 1
 trainset_size = 0.8
 print 'training set size', trainset_size
 iterations = 10
 shuffle_stat = 42
-# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree']
-attributes_name = ['reviewerID','friends_num', 'reviews_num', 'photo_num', ]
-
-# attributes_name = ['reviewerID', ]
+# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree'] # degree variable is useless
+# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', ]
+attributes_name = ['reviewerID', ]
 
 
 def split_trainset_testset(graph, attributes):
@@ -29,6 +29,7 @@ def split_trainset_testset(graph, attributes):
     :param attributes:
     :return:
     """
+    print
     print "split train set and test set "
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -42,15 +43,49 @@ def split_trainset_testset(graph, attributes):
                 temp_list.append(val)
             elif attr_name == 'fake':
                 Y_list.append(val)
-            elif attr_name == 'degree':
-                degree = graph.degree(node)
-                Y_list.append(int(degree))
+
+        if 'degree' in attributes:
+            degree = graph.degree(node)
+            temp_list.append(int(degree))
 
         X_list.append(temp_list)
-
-    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size, random_state=shuffle_stat)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1 - trainset_size,
+                                                        random_state=shuffle_stat)
     # X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size)
 
+    return X_train, X_test, Y_train, Y_test
+
+
+def split_trainset_testset_deepwalk(graph, attributes):
+    X_list = list()
+    Y_list = list()
+
+    with open('embeddings/friendship_reviewer_label_attr_clean_unknown_degree0.embeddings', 'r') as embeddings:
+        summary = embeddings.readline().split()
+        num_of_nodes = summary[0].strip()
+        num_of_dimension = summary[1].strip()
+
+        print summary
+
+        for line in embeddings:
+            features = line.strip().split(' ')
+            node_id = features[0]
+
+            for attr_name, val in graph.node[node_id].items():
+                if attr_name != 'reviewerID':
+                    if attr_name in attributes:
+                        features.append(val)
+                    elif attr_name == 'fake':
+                        Y_list.append(int(val))
+
+            if 'degree' in attributes:
+                degree = graph.degree(node_id)
+                features.append(int(degree))
+
+            X_list.append(features)
+
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1 - trainset_size,
+                                                        random_state=shuffle_stat)
     return X_train, X_test, Y_train, Y_test
 
 
@@ -61,6 +96,7 @@ def remove_test_label(graph, delete_list):
     :param delete_list:
     :return:
     """
+    print
     print "remove test set label"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -101,6 +137,7 @@ def Most_Common(lst):
     data = Counter(lst)
     return data.most_common(1)[0][0]
 
+
 # start
 graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
 graph = nx.read_gpickle(graph_path)
@@ -108,10 +145,9 @@ macro_sum = 0
 micro_sum = 0
 recall_sum = 0
 
-
 for round in range(run_times):
     # split
-    X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
+    X_train, X_test, Y_train, Y_test = split_trainset_testset_deepwalk(graph, attributes_name)
     print 'training set', len(X_train)
     print 'test set', len(X_test)
     final_X_test = copy.deepcopy(X_test)
@@ -121,11 +157,13 @@ for round in range(run_times):
     current_graph = remove_test_label(graph, X_test)
 
     # compute relational attributes using only known nodes
+    print
     print "computing the relational attributes"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
     zero_zero_num = 0
     for l in X_train:
         node_id = l[0]
+
         number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
         if current_graph.node[node_id].get('spammer_neighbors_num'):
             print "some thing wrong with relational attributes", current_graph.node[node_id]
@@ -140,13 +178,15 @@ for round in range(run_times):
 
     # train
     X_train_without_id = [node[1:] for node in X_train]
-
+    print
+    print 'dimension of training features', len(X_train_without_id[0])
+    print
     print "training classifier"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     classifier = tree.DecisionTreeClassifier(criterion="entropy")
     classifier.fit(X_train_without_id, Y_train)
-
+    print
     print "complete training"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -193,7 +233,7 @@ for round in range(run_times):
 
         micro = f1_score(Y_test, Y_predict, average='micro')
         macro = f1_score(Y_test, Y_predict, average='macro')
-        recall_rate = recall_score(Y_test, Y_predict,)
+        recall_rate = recall_score(Y_test, Y_predict, )
         print
         print "recall rate is ", recall_rate
         print "f1 macro is", macro
@@ -213,8 +253,8 @@ for round in range(run_times):
         # print 'final f1 micro is', f1_score(final_Y_test, final_label, average='micro')
         # print
 
-print 'average_recall:', recall_sum/run_times
-print 'average_macro:', macro_sum/run_times
-print 'average_micro:', micro_sum/run_times
-
-
+print
+print
+print 'average_recall:', recall_sum / run_times
+print 'average_macro:', macro_sum / run_times
+print 'average_micro:', micro_sum / run_times

@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 trainset_size = 0.5
 shuffle_stat = 42
 
-def split_trainset_testset(graph):
+def split_trainset_testset_deepwalk(graph):
 
     X_list = list()
     Y_list = list()
@@ -26,9 +26,13 @@ def split_trainset_testset(graph):
 
         print summary
         for line in embeddings:
-            print line
+            features = line.strip().split(' ')
 
-            break
+            node_id = features[0]
+            X_list.append(features[1:])
+            Y_list.append(graph.node[node_id])
+
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size, random_state=shuffle_stat)
 
     # print "split train set and test set "
     # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -52,4 +56,5 @@ def split_trainset_testset(graph):
     # X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size, random_state=shuffle_stat)
 
 if __name__ == '__main__':
-    split_trainset_testset()
+    graph = nx.read_gpickle('graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle')
+    split_trainset_testset_deepwalk(graph)
