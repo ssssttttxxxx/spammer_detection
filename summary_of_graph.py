@@ -3,13 +3,13 @@ import networkx as nx
 
 if __name__ == "__main__":
     graph_path = 'graph/separate_spammer_771487.pickle'
-    graph_attr_path = 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle'
+    graph_attr_path = 'graph/reduce_label_attr_clean_unknown_degree0.pickle'
     friendship_graph = nx.read_gpickle(graph_path)
     friendship_graph_attr = nx.read_gpickle(graph_attr_path)
     print "clean unknown"
     print friendship_graph.number_of_nodes()
     print friendship_graph.number_of_edges()
-    print "clean unknown and degree_0"
+    print "reduce clean unknown and degree_0"
     print friendship_graph_attr.number_of_nodes()
     print friendship_graph_attr.number_of_edges()
 

@@ -19,7 +19,7 @@ graph = nx.read_gpickle(graph_path)
 # nx.draw_spring(graph, cmap=plt.get_cmap('jet'), node_color=values, node_size=30, with_labels=False)
 # plt.show()
 
-k = 3
+k = 4
 print 'community detecting'
 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 # partitions_generator = nx.algorithms.community.k_clique_communities(graph, k)

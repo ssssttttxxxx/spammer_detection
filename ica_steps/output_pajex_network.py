@@ -2,8 +2,8 @@
 
 import networkx as nx
 
-graph_path = 'graph/separate_spammer_771487.pickle'
+graph_path = '../graph/reduce_clean.pickle'
 graph = nx.read_gpickle(graph_path)
 
 # nx.write_pajek(graph, 'pajek/separate_spammer_771000_pajek.net')
-nx.write_gexf(graph, 'gexf/separate_spammer_771487.gexf')
+nx.write_adjlist(graph, '../graph/reduce_clean.adjlist')

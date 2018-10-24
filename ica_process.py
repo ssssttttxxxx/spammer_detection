@@ -16,7 +16,9 @@ trainset_size = 0.8
 print 'training set size', trainset_size
 iterations = 10
 shuffle_stat = 42
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
+# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree']
+attributes_name = ['reviewerID','friends_num', 'reviews_num', 'photo_num', ]
+
 # attributes_name = ['reviewerID', ]
 
 
@@ -40,12 +42,14 @@ def split_trainset_testset(graph, attributes):
                 temp_list.append(val)
             elif attr_name == 'fake':
                 Y_list.append(val)
-            
+            elif attr_name == 'degree':
+                degree = graph.degree(node)
+                Y_list.append(int(degree))
 
         X_list.append(temp_list)
 
-    # X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size, random_state=shuffle_stat)
-    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size)
+    X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size, random_state=shuffle_stat)
+    # X_train, X_test, Y_train, Y_test = train_test_split(X_list, Y_list, test_size=1-trainset_size)
 
     return X_train, X_test, Y_train, Y_test
 
