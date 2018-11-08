@@ -6,7 +6,7 @@ import random
 import pickle
 import graphviz
 import networkx as nx
-from sklearn import tree
+from sklearn import tree, svm
 from collections import Counter
 from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
@@ -94,7 +94,8 @@ for round_num in range(run_times):
     print "training classifier"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-    classifier = tree.DecisionTreeClassifier(criterion="entropy")
+    # classifier = tree.DecisionTreeClassifier(criterion="entropy")
+    classifier = svm.SVC()
     classifier.fit(X_train_without_id, Y_train)
 
     print "complete training"
