@@ -11,6 +11,7 @@ from collections import Counter
 from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
+from ica_process import over_sampling
 
 trainset_size = 0.8
 print 'training set size', trainset_size
@@ -23,6 +24,7 @@ attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
 
 #  divide data by training set and test set
 def split_tarinset_testset(graph, attributes):
+    print
     print "split train set and test set "
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -47,6 +49,7 @@ def split_tarinset_testset(graph, attributes):
 
 #  remove the test set label on the graph data
 def remove_test_label(graph, delete_list):
+    print
     print "remove test set label"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -73,7 +76,8 @@ def compute_attribute(current_graph, node):
 
 
 # start
-graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
+# graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
+graph_path = 'graph/high_degree_partition_2.pickle'
 graph = nx.read_gpickle(graph_path)
 macro_sum = 0
 micro_sum = 0
@@ -86,18 +90,25 @@ for round_num in range(run_times):
     current_graph = remove_test_label(graph, X_test)
 
     # X_train_without_id = [node[1:] for node in X_train]
+
+    # over sampling
+    X_train, Y_train = over_sampling(X_train, Y_train)
+
     X_train_without_id = list()
     print len(X_train_without_id)
     for node in X_train:
         l = copy.deepcopy(node[1:])
         X_train_without_id.append(l)
+
+    print
     print "training classifier"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-    # classifier = tree.DecisionTreeClassifier(criterion="entropy")
-    classifier = svm.SVC()
+    classifier = tree.DecisionTreeClassifier(criterion="entropy")
+    # classifier = svm.SVC()
     classifier.fit(X_train_without_id, Y_train)
 
+    print
     print "complete training"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
@@ -112,6 +123,8 @@ for round_num in range(run_times):
     micro = f1_score(Y_test, Y_predict, average='micro')
     macro = f1_score(Y_test, Y_predict, average='macro')
     recall_rate = recall_score(Y_test, Y_predict, average='binary')
+
+    print
     print "f1 macro is", macro
     print "f1 micro is", micro
     print "recall rate is", recall_rate
@@ -119,6 +132,7 @@ for round_num in range(run_times):
     macro_sum += macro
     micro_sum += micro
 
+print
 print 'average_recall:', recall_sum/run_times
 print 'average_macro:', macro_sum/run_times
 print 'average_micro:', micro_sum/run_times
