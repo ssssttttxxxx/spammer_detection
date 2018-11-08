@@ -6,6 +6,7 @@ import os
 import time
 
 class ReadFriendshipGraph:
+
     """
     This class include the label funciton (为网络中的节点添加标签)
     """

@@ -15,11 +15,11 @@ from sklearn.model_selection import train_test_split
 run_times = 1
 trainset_size = 0.8
 print 'training set size', trainset_size
-iterations = 10
+iterations = 40
 shuffle_stat = 42
 # attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree'] # degree variable is useless
-# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', ]
-attributes_name = ['reviewerID', ]
+attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', ]
+# attributes_name = ['reviewerID', ]
 
 
 def split_trainset_testset(graph, attributes):
@@ -138,8 +138,26 @@ def Most_Common(lst):
     return data.most_common(1)[0][0]
 
 
+def over_sampling(X_train, X_label):
+    number_of_training_set = 200000
+    spammer_list = list()
+    non_spammer_list = list()
+
+    sampled_train_list = list()
+    sampled_label_list = list()
+
+    for attrs, label in zip(X_train, X_label):
+        if label == 1:
+            spammer_list.append(attrs)
+        elif label == 0:
+            non_spammer_list.append(attrs)
+
+
+
+    pass
+
 # start
-graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
+graph_path = "graph/high_degree_partition_2.pickle"
 graph = nx.read_gpickle(graph_path)
 macro_sum = 0
 micro_sum = 0
@@ -147,7 +165,7 @@ recall_sum = 0
 
 for round in range(run_times):
     # split
-    X_train, X_test, Y_train, Y_test = split_trainset_testset_deepwalk(graph, attributes_name)
+    X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
     print 'training set', len(X_train)
     print 'test set', len(X_test)
     final_X_test = copy.deepcopy(X_test)
