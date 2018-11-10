@@ -25,6 +25,7 @@ class YelpData:
     def read_reviewer(self):
         reviewer_sql = "select * from reviewers limit 10"
         self.cursor.execute(reviewer_sql)
+
         data = self.cursor.fetchall()
         for single_data in data:
             print single_data
