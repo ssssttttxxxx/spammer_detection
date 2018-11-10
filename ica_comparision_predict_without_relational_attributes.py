@@ -13,7 +13,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from sklearn.model_selection import train_test_split
 from ica_process import over_sampling
 
-trainset_size = 0.8
+trainset_size = 0.5
 print 'training set size', trainset_size
 run_times = 5
 iterations = 20

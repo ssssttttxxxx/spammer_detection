@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 
 # configure
 run_times = 1
-training_set_size = 0.8
+training_set_size = 0.5
 print 'training set size', training_set_size
 iterations = 10
 shuffle_stat = 42
