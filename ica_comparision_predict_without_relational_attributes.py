@@ -11,11 +11,11 @@ from collections import Counter
 from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
-from ica_process import over_sampling
+from ica_process import over_sampling, SMOTE_over_sampling
 
 trainset_size = 0.5
 print 'training set size', trainset_size
-run_times = 5
+run_times = 1
 iterations = 20
 shuffle_stat = 42
 attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
@@ -86,27 +86,65 @@ recall_sum = 0
 for round_num in range(run_times):
     # split
     X_train, X_test, Y_train, Y_test = split_tarinset_testset(graph, attributes_name)
+
     # remove label of nodes in test set
     current_graph = remove_test_label(graph, X_test)
 
-    # X_train_without_id = [node[1:] for node in X_train]
+    ###########################
+    zero_zero_num = 0
+    for l in X_train:
+        node_id = l[0]
 
-    # over sampling
-    X_train, Y_train = over_sampling(X_train, Y_train)
+        number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+        if current_graph.node[node_id].get('spammer_neighbors_num'):
+            # continue  # when use sampling method, use following
+            print "some thing wrong with relational attributes", current_graph.node[node_id]
 
-    X_train_without_id = list()
-    print len(X_train_without_id)
-    for node in X_train:
-        l = copy.deepcopy(node[1:])
-        X_train_without_id.append(l)
+        if number_of_non_spammers == 0 and number_of_spammers == 0:
+            zero_zero_num += 1
+
+        current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
+        current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
+        l.append(number_of_spammers)
+        l.append(number_of_non_spammers)
+    print 'node 0-0:', zero_zero_num
+
+    for l in X_test:
+        node_id = l[0]
+
+        number_of_spammers, number_of_non_spammers = compute_attribute(graph, node_id)
+        if graph.node[node_id].get('spammer_neighbors_num'):
+            # continue  # when use sampling method, use following
+            print "some thing wrong with relational attributes", graph.node[node_id]
+
+        if number_of_non_spammers == 0 and number_of_spammers == 0:
+            zero_zero_num += 1
+        graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
+        graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
+        l.append(number_of_spammers)
+        l.append(number_of_non_spammers)
+
+    #############################################3
+    print X_train[0:5]
+
+    X_train_without_id = [node[1:] for node in X_train]
 
     print
     print "training classifier"
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-    classifier = tree.DecisionTreeClassifier(criterion="entropy")
+    # over sampling
+    X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
+
+    # classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
     # classifier = svm.SVC()
-    classifier.fit(X_train_without_id, Y_train)
+    # classifier.fit(X_train_without_id, Y_train)
+
+    import pickle
+    print
+    print "load classifier"
+    model_path = 'decision_tree_result/decision_tree_model42.sav'
+    classifier = pickle.load(open(model_path, 'rb'))
 
     print
     print "complete training"

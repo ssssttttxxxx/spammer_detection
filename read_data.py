@@ -10,6 +10,7 @@ class YelpData:
 
     def __init__(self):
         self.db = MySQLdb.connect("server_address", "username", "password", "yelp", charset="utf8")
+
         self.cursor = self.db.cursor()
         self.mydb = MySQLdb.connect("localhost", "root", "stx11stx11", "yelp_data", charset="utf8")
         self.mycursor = self.mydb.cursor()

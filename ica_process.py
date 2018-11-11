@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import time
 import copy
+import pickle
 import random
+import pandas as pd
+from numpy import array
 import pickle
 import networkx as nx
 from collections import Counter
@@ -11,6 +14,8 @@ from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
+from imblearn.over_sampling import SMOTE, RandomOverSampler
+
 
 # configure
 run_times = 1
@@ -61,7 +66,7 @@ def split_trainset_testset_deepwalk(graph, attributes):
     X_list = list()
     Y_list = list()
 
-    with open('embeddings/friendship_reviewer_label_attr_clean_unknown_degree0.embeddings', 'r') as embeddings:
+    with open('embeddings/high_degree.embeddings', 'r') as embeddings:
         summary = embeddings.readline().split()
         num_of_nodes = summary[0].strip()
         num_of_dimension = summary[1].strip()
@@ -164,6 +169,18 @@ def over_sampling(X_train, X_label):
     return sampled_train_list, sampled_label_list
 
 
+def SMOTE_over_sampling(X_train, X_label):
+    X_train = array(X_train).astype(float)
+    X_label = array(X_label).astype(float)
+    print('Original dataset shape {}'.format(Counter(X_label)))
+
+    sm = SMOTE(random_state=shuffle_stat)
+    over_samples_X, over_samples_Y = sm.fit_sample(X_train, X_label)
+    print("After OverSampling, counts of label '1': {}".format(sum(over_samples_Y == 1)))
+    print("After OverSampling, counts of label '0': {}".format(sum(over_samples_Y == 0)))
+    return over_samples_X, over_samples_Y
+
+
 if __name__ == '__main__':
     # start
     graph_path = "graph/high_degree_partition_2.pickle"
@@ -175,6 +192,7 @@ if __name__ == '__main__':
     for round_num in range(run_times):
         # split
         X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
+        print
         print 'training set', len(X_train)
         print 'test set', len(X_test)
 
@@ -207,25 +225,33 @@ if __name__ == '__main__':
             l.append(number_of_non_spammers)
         print 'node 0-0:', zero_zero_num
 
+        print X_train[0:5]
+
         # over sampling
-        X_train, Y_train = over_sampling(X_train, Y_train)
+        X_train_without_id = [node[1:] for node in X_train]
+
+        X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
 
         # train
-        X_train_without_id = [node[1:] for node in X_train]
         print
         print 'dimension of training features', len(X_train_without_id[0])
         print
         print "training classifier"
         print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-        classifier = tree.DecisionTreeClassifier(criterion="entropy")
-        classifier.fit(X_train_without_id, Y_train)
-        print
-        print "complete training"
-        print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        # classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
+        # classifier.fit(X_train_without_id, Y_train)
+        # print
+        # print "complete training"
+        # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        #
+        # filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
+        # pickle.dump(classifier, open(filename, 'wb'))
 
-        filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
-        pickle.dump(classifier, open(filename, 'wb'))
+        print
+        print "load classifier"
+        model_path = 'decision_tree_result/decision_tree_model42.sav'
+        classifier = pickle.load(open(model_path, 'rb'))
 
         # predict the label of unknown node
         Y_all_predict = defaultdict(list)  # include all the label prediction of each iteration
@@ -275,7 +301,6 @@ if __name__ == '__main__':
         recall_sum += recall_rate
         macro_sum += macro
         micro_sum += micro
-
 
     print
     print
