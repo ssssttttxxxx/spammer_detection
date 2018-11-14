@@ -17,16 +17,16 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE, RandomOverSampler
 from sklearn.naive_bayes import GaussianNB
-
+from sklearn.ensemble import RandomForestClassifier
 
 # configure
 run_times = 1
-training_set_size = 0.5
+training_set_size = 0.8
 print 'training set size', training_set_size
 iterations = 10
-shuffle_stat = 42
-# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree'] # degree variable is useless
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', ]
+shuffle_stat = 67
+attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree'] # degree variable is useless
+# attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', ]
 # attributes_name = ['reviewerID', ]
 
 
@@ -68,7 +68,9 @@ def split_trainset_testset_deepwalk(graph, attributes):
     X_list = list()
     Y_list = list()
 
-    with open('embeddings/high_degree.embeddings', 'r') as embeddings:
+    with open('embeddings/friendship_reviewer_label_attr_clean_unknown_degree0.embeddings', 'r') as embeddings:
+    # with open('embeddings/high_degree.embeddings', 'r') as embeddings:
+
         summary = embeddings.readline().split()
         num_of_nodes = summary[0].strip()
         num_of_dimension = summary[1].strip()
@@ -175,7 +177,7 @@ def SMOTE_over_sampling(X_train, X_label):
     X_label = array(X_label).astype(float)
     print('Original dataset shape {}'.format(Counter(X_label)))
 
-    sm = SMOTE(0.382, random_state=shuffle_stat)
+    sm = SMOTE(random_state=shuffle_stat)
     over_samples_X, over_samples_Y = sm.fit_sample(X_train, X_label)
     print("After OverSampling, counts of label '1': {}".format(sum(over_samples_Y == 1)))
     print("After OverSampling, counts of label '0': {}".format(sum(over_samples_Y == 0)))
@@ -199,14 +201,24 @@ def compute_second_degree_attributes(current_graph, node):
     return number_of_second_spammers, number_of_second_non_spammers
 
 
+def aggregation_percentage(label1_num, label2_num):
+    sum_num = label1_num + label2_num
+    if sum_num == 0:
+        return sum_num, sum_num
+    label1_percentage = float(label1_num)/sum_num
+    label2_percentage = float(label2_num)/sum_num
+    # print label1_percentage, label2_percentage
+    return label1_percentage, label2_percentage
+
+
 if __name__ == '__main__':
     # start
-    graph_path = "graph/high_degree_partition_2.pickle"
+    graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
     graph = nx.read_gpickle(graph_path)
 
     for round_num in range(run_times):
         # 分成测试集训练集
-        X_train, X_test, Y_train, Y_test = split_trainset_testset_deepwalk(graph, attributes_name)
+        X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
         print
         print 'training set', len(X_train)
         print 'test set', len(X_test)
@@ -229,6 +241,8 @@ if __name__ == '__main__':
             node_id = l[0]
 
             number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+            # spammers_percentage, non_spammers_persentage = aggregation_percentage(number_of_spammers, number_of_non_spammers)
+
             # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph,
             #                                                                                            node_id)
 
@@ -252,6 +266,7 @@ if __name__ == '__main__':
         X_train_without_id = array(X_train_without_id).astype(float)
         Y_train = array(Y_train).astype(float)
 
+        # 过采样
         # X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
 
         # 训练分类器
@@ -261,8 +276,9 @@ if __name__ == '__main__':
         # print "training classifier"
         # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
-        # classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
-        classifier = GaussianNB()
+        classifier = tree.DecisionTreeClassifier(random_state=shuffle_stat)
+        # classifier = GaussianNB()
+        # classifier = RandomForestClassifier()
         classifier.fit(X_train_without_id, Y_train)
         # print
         # print "complete training"
@@ -276,12 +292,20 @@ if __name__ == '__main__':
         # model_path = 'decision_tree_result/decision_tree_model42.sav'
         # classifier = pickle.load(open(model_path, 'rb'))
 
-        # 直接使用决策树
+        # 测试分类器对训练集的分类效果
+        Y_train_predict = list()
+        for l in X_train:
+            Y_train_predict.append(classifier.predict([l[1:]]))
+        print classification_report(Y_train, Y_train_predict)
+        print '----------------------------------------------------------------'
+
+        # 直接使用分类器
         Y_predict = list()
         X_test_copy = copy.deepcopy(X_test)
         for X in X_test_copy:
             node_id = X[0]
             number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+            # spammers_percentage, non_spammers_persentage = aggregation_percentage(number_of_spammers, number_of_non_spammers)
             # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph,
             #                                                                                            node_id)
 
@@ -330,6 +354,9 @@ if __name__ == '__main__':
 
                 # compute attributes
                 number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+                # spammers_percentage, non_spammers_persentage = aggregation_percentage(number_of_spammers,
+                #                                                                       number_of_non_spammers)
+
                 # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph, node_id)
                 X.append(number_of_spammers)
                 X.append(number_of_non_spammers)
@@ -350,7 +377,7 @@ if __name__ == '__main__':
             macro = f1_score(Y_test, Y_predict, average='macro')
             recall_rate = recall_score(Y_test, Y_predict)
             acc = accuracy_score(Y_test, Y_predict)
-            print classification_report(Y_test, Y_predict, digits=8)
+            print classification_report(Y_test, Y_predict, digits=6)
             # print "recall rate is ", recall_rate
             # print "f1 macro is", macro
             # print "f1 micro is", micro
