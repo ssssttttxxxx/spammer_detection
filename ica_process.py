@@ -11,10 +11,12 @@ from collections import Counter
 from sklearn import tree
 from sklearn.utils import shuffle
 from collections import defaultdict
-from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score, \
+    classification_report
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE, RandomOverSampler
+from sklearn.naive_bayes import GaussianNB
 
 
 # configure
@@ -35,9 +37,9 @@ def split_trainset_testset(graph, attributes):
     :param attributes:
     :return:
     """
-    print
-    print "split train set and test set "
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # print
+    # print "split train set and test set "
+    # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     X_list = list()
     Y_list = list()
@@ -102,9 +104,9 @@ def remove_test_label(graph, delete_list):
     :param delete_list:
     :return:
     """
-    print
-    print "remove test set label"
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+    # print
+    # print "remove test set label"
+    # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     current_graph = graph.copy()
     for node in delete_list:
@@ -145,7 +147,6 @@ def Most_Common(lst):
 
 
 def over_sampling(X_train, X_label):
-
     spammer_list = list()
     non_spammer_list = list()
 
@@ -174,24 +175,38 @@ def SMOTE_over_sampling(X_train, X_label):
     X_label = array(X_label).astype(float)
     print('Original dataset shape {}'.format(Counter(X_label)))
 
-    sm = SMOTE(random_state=shuffle_stat)
+    sm = SMOTE(0.382, random_state=shuffle_stat)
     over_samples_X, over_samples_Y = sm.fit_sample(X_train, X_label)
     print("After OverSampling, counts of label '1': {}".format(sum(over_samples_Y == 1)))
     print("After OverSampling, counts of label '0': {}".format(sum(over_samples_Y == 0)))
     return over_samples_X, over_samples_Y
 
 
+def compute_second_degree_attributes(current_graph, node):
+    neighbors = current_graph.neighbors(node)
+    number_of_second_spammers = 0
+    number_of_second_non_spammers = 0
+    for neighbor in neighbors:
+        second_neighbors = current_graph.neighbors(neighbor)
+        for second_neighbor in second_neighbors:
+            if current_graph.node[second_neighbor]['fake'] == 1:
+                number_of_second_spammers += 1
+            elif current_graph.node[second_neighbor]['fake'] == 0:
+                number_of_second_non_spammers += 1
+            else:
+                continue
+
+    return number_of_second_spammers, number_of_second_non_spammers
+
+
 if __name__ == '__main__':
     # start
     graph_path = "graph/high_degree_partition_2.pickle"
     graph = nx.read_gpickle(graph_path)
-    macro_sum = 0
-    micro_sum = 0
-    recall_sum = 0
 
     for round_num in range(run_times):
-        # split
-        X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
+        # 分成测试集训练集
+        X_train, X_test, Y_train, Y_test = split_trainset_testset_deepwalk(graph, attributes_name)
         print
         print 'training set', len(X_train)
         print 'test set', len(X_test)
@@ -203,56 +218,99 @@ if __name__ == '__main__':
         current_graph = remove_test_label(graph, X_test)
 
         # compute relational attributes using only known nodes
-        print
-        print "computing the relational attributes"
-        print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        # print
+        # print "computing the relational attributes"
+        # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
+        # 处理训练集
         zero_zero_num = 0  # record the number of node whose neighbors are all belonged to test set
 
         for l in X_train:
             node_id = l[0]
 
             number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+            # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph,
+            #                                                                                            node_id)
+
             if current_graph.node[node_id].get('spammer_neighbors_num'):
                 # continue  # when use sampling method, use following
                 print "some thing wrong with relational attributes", current_graph.node[node_id]
 
             if number_of_non_spammers == 0 and number_of_spammers == 0:
                 zero_zero_num += 1
+
             current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
             current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
             l.append(number_of_spammers)
             l.append(number_of_non_spammers)
-        print 'node 0-0:', zero_zero_num
+            # l.append(number_of_second_spammers)
+            # l.append(number_of_second_non_spammer)
 
-        print X_train[0:5]
+        # print 'node 0-0:', zero_zero_num
 
-        # over sampling
         X_train_without_id = [node[1:] for node in X_train]
+        X_train_without_id = array(X_train_without_id).astype(float)
+        Y_train = array(Y_train).astype(float)
 
-        X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
+        # X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
 
-        # train
+        # 训练分类器
         print
         print 'dimension of training features', len(X_train_without_id[0])
-        print
-        print "training classifier"
-        print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+        # print
+        # print "training classifier"
+        # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
         # classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
-        # classifier.fit(X_train_without_id, Y_train)
+        classifier = GaussianNB()
+        classifier.fit(X_train_without_id, Y_train)
         # print
         # print "complete training"
         # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        #
-        # filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
-        # pickle.dump(classifier, open(filename, 'wb'))
 
-        print
-        print "load classifier"
-        model_path = 'decision_tree_result/decision_tree_model42.sav'
-        classifier = pickle.load(open(model_path, 'rb'))
+        filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
+        pickle.dump(classifier, open(filename, 'wb'))
 
+        # print
+        # print "load classifier"
+        # model_path = 'decision_tree_result/decision_tree_model42.sav'
+        # classifier = pickle.load(open(model_path, 'rb'))
+
+        # 直接使用决策树
+        Y_predict = list()
+        X_test_copy = copy.deepcopy(X_test)
+        for X in X_test_copy:
+            node_id = X[0]
+            number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+            # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph,
+            #                                                                                            node_id)
+
+            X.append(number_of_spammers)
+            X.append(number_of_non_spammers)
+            # X.append(number_of_second_spammers)
+            # X.append(number_of_second_non_spammer)
+            X_test_without_id = X[1:]
+            X_test_fit = array(X_test_without_id).astype(float)
+
+            Y_ = classifier.predict([X_test_fit])
+            Y_predict.append(Y_)
+            # update
+            current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
+            current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
+            current_graph.node[node_id]['fake'] = int(Y_)
+
+        micro = f1_score(Y_test, Y_predict, average='micro')
+        macro = f1_score(Y_test, Y_predict, average='macro')
+        recall_rate = recall_score(Y_test, Y_predict)
+        acc = accuracy_score(Y_test, Y_predict)
+        print classification_report(Y_test, Y_predict, digits=4)
+        print '------------------------------------------------------------------'
+        # print
+        # print "recall rate is ", recall_rate
+        # print "f1 macro is", macro
+        # print "f1 micro is", micro
+
+        # 使用ica算法
         # predict the label of unknown node
         Y_all_predict = defaultdict(list)  # include all the label prediction of each iteration
 
@@ -272,11 +330,14 @@ if __name__ == '__main__':
 
                 # compute attributes
                 number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
+                # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph, node_id)
                 X.append(number_of_spammers)
                 X.append(number_of_non_spammers)
-                if number_of_spammers == 0 and number_of_non_spammers == 0 and iteration > 0:
-                    print 'some thing wrong'
-                label_predict = classifier.predict([X[1:]])
+                # X.append(number_of_second_spammers)
+                # X.append(number_of_second_non_spammer)
+                X_test_without_id = X[1:]
+                X_test_fit = array(X_test_without_id).astype(float)
+                label_predict = classifier.predict([X_test_fit])
                 Y_predict.append(int(label_predict))
                 Y_all_predict[X[0]].append(int(label_predict))
 
@@ -285,25 +346,11 @@ if __name__ == '__main__':
                 current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
                 current_graph.node[node_id]['fake'] = int(label_predict)
 
-                # if node_id == specific_node:
-                #     print current_graph.node[node_id]
-                #     neighbors = current_graph.neighbors(node_id)
-                #     for neighbor in neighbors:
-                #         print 'neighbor', current_graph.node[neighbor]
-
             micro = f1_score(Y_test, Y_predict, average='micro')
             macro = f1_score(Y_test, Y_predict, average='macro')
-            recall_rate = recall_score(Y_test, Y_predict, )
-            print
-            print "recall rate is ", recall_rate
-            print "f1 macro is", macro
-            print "f1 micro is", micro
-        recall_sum += recall_rate
-        macro_sum += macro
-        micro_sum += micro
-
-    print
-    print
-    print 'average_recall:', recall_sum / run_times
-    print 'average_macro:', macro_sum / run_times
-    print 'average_micro:', micro_sum / run_times
+            recall_rate = recall_score(Y_test, Y_predict)
+            acc = accuracy_score(Y_test, Y_predict)
+            print classification_report(Y_test, Y_predict, digits=8)
+            # print "recall rate is ", recall_rate
+            # print "f1 macro is", macro
+            # print "f1 micro is", micro

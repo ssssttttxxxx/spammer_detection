@@ -13,7 +13,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 from sklearn.model_selection import train_test_split
 from ica_process import over_sampling, SMOTE_over_sampling
 
-trainset_size = 0.5
+trainset_size = 0.8
 print 'training set size', trainset_size
 run_times = 1
 iterations = 20
@@ -75,6 +75,7 @@ def compute_attribute(current_graph, node):
     return number_of_spammers, number_of_non_spammers
 
 
+
 # start
 # graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
 graph_path = 'graph/high_degree_partition_2.pickle'
@@ -134,7 +135,7 @@ for round_num in range(run_times):
     print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
 
     # over sampling
-    X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
+    # X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
 
     # classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
     # classifier = svm.SVC()

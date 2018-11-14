@@ -46,10 +46,33 @@ class ReadFriendshipGraph:
         else:
             return 1
 
+    def review_type(self, reviewer_id):
+        """
+
+        Parameters
+        ----------
+        reviewer_id
+
+        Returns
+        -------
+
+        """
+        sql_1 = "select count(*) from reviews_simple where reviewerID = '%s' and fake = 1" % reviewer_id
+        sql_2 = "select count(*) from reviews_simple where reviewerID = '%s' and fake = 0" % reviewer_id
+
+        self.cursor.execute(sql_1)
+        number_of_normal_reviews = self.cursor.fetchone()
+        number_of_fake_reviews = self.cursor.fetchone()
+        return number_of_fake_reviews, number_of_normal_reviews
+
+
     def label_users(self):
         """
         label the user with fake, which means that whether a user is a spammer
-        :return:
+        
+        Returns
+        -------
+
         """
         record_unit = 1000
         print self.friendship_graph.number_of_nodes()
