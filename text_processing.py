@@ -7,7 +7,7 @@ import networkx as nx
 class YelpData:
 
     def __init__(self):
-        self.db = MySQLdb.connect("quantum2.is.cityu.edu.hk", "readyelp", "yelp2018", "yelp", charset="utf8")
+        self.db = MySQLdb.connect("localhost", "root", "stx11stx11", "yelp_data", charset="utf8")
         self.cursor = self.db.cursor()
 
     def read_user_review(self, reviewerID):
