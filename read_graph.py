@@ -14,7 +14,7 @@ class ReadFriendshipGraph:
     def __init__(self):
         print "begin init", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         # self.graph_path = 'friendship_graph/friendship_attr_925100.pickle'
-        self.graph_path = 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle'
+        self.graph_path = 'graph/friendship_clean_attitude.pickle'
         self.friendship_graph = nx.read_gpickle(self.graph_path)
         # self.db = MySQLdb.connect("quantum2.is.cityu.edu.hk.", "readyelp", "yelp2018", "yelp", charset="utf8")
         self.db = MySQLdb.connect("localhost", "root", "stx11stx11", "yelp_data", charset="utf8")
