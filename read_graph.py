@@ -13,7 +13,8 @@ class ReadFriendshipGraph:
 
     def __init__(self):
         print "begin init", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-        self.graph_path = 'friendship_graph/friendship_attr_925100.pickle'
+        # self.graph_path = 'friendship_graph/friendship_attr_925100.pickle'
+        self.graph_path = 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle'
         self.friendship_graph = nx.read_gpickle(self.graph_path)
         # self.db = MySQLdb.connect("quantum2.is.cityu.edu.hk.", "readyelp", "yelp2018", "yelp", charset="utf8")
         self.db = MySQLdb.connect("localhost", "root", "stx11stx11", "yelp_data", charset="utf8")
@@ -58,13 +59,15 @@ class ReadFriendshipGraph:
         legitimate_sql = "select count(*) from reviews_simple where reviewerID = '%s' and fake = 0" % reviewer_id
 
         self.cursor.execute(fake_sql)
-        fake_num = self.cursor.fetchone()
+        fake_num = self.cursor.fetchone()[0]
         self.cursor.execute(legitimate_sql)
-        legitimate_num = self.cursor.fetchone()
+        legitimate_num = self.cursor.fetchone()[0]
+
         total_num = float(fake_num + legitimate_num)
         if total_num == 0:
             return 2  # 2 represents unknown label
         else:
+
             if fake_num/total_num > cut_value:
                 return 1
             else:
@@ -102,17 +105,17 @@ class ReadFriendshipGraph:
         print self.friendship_graph.number_of_edges()
 
         for num, node in enumerate(self.friendship_graph.nodes()):
-            fake_flag = self.determine_spammer(node)
+            fake_flag = self.determine_spammer_by_percentage(node)
             self.friendship_graph.node[node]['fake'] = fake_flag
             # print self.friendship_graph.node[node]
             if num % record_unit == 0:
                 print num
                 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-                nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label_attr%d.pickle" % num)
+                nx.write_gpickle(self.friendship_graph, "graph/firendship_new_label%d.pickle" % num)
                 if num != 0:
-                    os.remove("graph/friendship_reviewer_label_attr%d.pickle" % (num - record_unit))
+                    os.remove("graph/firendship_new_label%d.pickle" % (num - record_unit))
 
-        nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label_attr%d.pickle" % num)
+        nx.write_gpickle(self.friendship_graph, "graph/firendship_new_label%d.pickle" % num)
 
     def create_temporary_test(self):
         sql = "create temporary table reviewID_fake select id, reviewerID, fake from reviews "
