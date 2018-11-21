@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
-    graph_path_1 = 'graph/high_degree_partition_2.pickle'
+    graph_path_1 = 'graph/friendship_clean_attitude.pickle'
     graph_path_2 = 'graph/high_degree_partition_from_friendship_attr_total_cleanUnknown_cleanDegree0.pickle'
     graph_1 = nx.read_gpickle(graph_path_1)
     graph_2 = nx.read_gpickle(graph_path_2)

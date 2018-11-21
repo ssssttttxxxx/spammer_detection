@@ -40,10 +40,9 @@ class CalculateCentrality:
         print num
         self.insert_degree_centrality(insert_item_list)
 
-
         # all_node_degree_centrality = nx.degree_centrality(self.spammer_graph)
 
-    def betweeness_centrality(self):
+    def betweenness_centrality(self):
 
         # for num, node in enumerate(self.spammer_graph.nodes()):
         #     if num == 2:
@@ -59,6 +58,8 @@ class CalculateCentrality:
             print iter
             print item
 
+    def closeness_centrality(self):
+        pass
 
     def insert_degree_centrality(self, params):
         """
@@ -69,6 +70,7 @@ class CalculateCentrality:
         spammer_sql = "insert into spammer_degree_centrality(id, degree_centrality) values (%s, %s)"
         self.cursor.executemany(spammer_sql, params)
         self.db.commit()
+
 
 if __name__ == '__main__':
     CC = CalculateCentrality()

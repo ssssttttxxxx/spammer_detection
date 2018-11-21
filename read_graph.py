@@ -5,11 +5,12 @@ import networkx as nx
 import os
 import time
 
-class ReadFriendshipGraph:
 
+class ReadFriendshipGraph:
     """
     This class include the label funciton (为网络中的节点添加标签)
     """
+
     def __init__(self):
         print "begin init", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
         self.graph_path = 'friendship_graph/friendship_attr_925100.pickle'
@@ -46,6 +47,29 @@ class ReadFriendshipGraph:
         else:
             return 1
 
+    def determine_spammer_by_percentage(self, reviewer_id):
+        """
+        determine the spammer by the percentage of fake reviews that a person publish
+        :return:
+        """
+        cut_value = 0.5
+
+        fake_sql = "select count(*) from reviews_simple where reviewerID = '%s' and fake = 1" % reviewer_id
+        legitimate_sql = "select count(*) from reviews_simple where reviewerID = '%s' and fake = 0" % reviewer_id
+
+        self.cursor.execute(fake_sql)
+        fake_num = self.cursor.fetchone()
+        self.cursor.execute(legitimate_sql)
+        legitimate_num = self.cursor.fetchone()
+        total_num = float(fake_num + legitimate_num)
+        if total_num == 0:
+            return 2  # 2 represents unknown label
+        else:
+            if fake_num/total_num > cut_value:
+                return 1
+            else:
+                return 0
+
     def review_type(self, reviewer_id):
         """
 
@@ -64,7 +88,6 @@ class ReadFriendshipGraph:
         number_of_normal_reviews = self.cursor.fetchone()
         number_of_fake_reviews = self.cursor.fetchone()
         return number_of_fake_reviews, number_of_normal_reviews
-
 
     def label_users(self):
         """
@@ -87,18 +110,17 @@ class ReadFriendshipGraph:
                 print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
                 nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label_attr%d.pickle" % num)
                 if num != 0:
-                    os.remove("graph/friendship_reviewer_label_attr%d.pickle" % (num-record_unit))
+                    os.remove("graph/friendship_reviewer_label_attr%d.pickle" % (num - record_unit))
 
         nx.write_gpickle(self.friendship_graph, "graph/friendship_reviewer_label_attr%d.pickle" % num)
-
 
     def create_temporary_test(self):
         sql = "create temporary table reviewID_fake select id, reviewerID, fake from reviews "
         self.cursor.execute(sql)
 
+
 if __name__ == "__main__":
     RFG = ReadFriendshipGraph()
     # flag = RFG.determine_spammer('DFWXDnzAyxQ7kxg12h4BlQ')
     # print flag
-
     RFG.label_users()

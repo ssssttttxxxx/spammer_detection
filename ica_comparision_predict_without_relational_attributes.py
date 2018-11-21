@@ -75,10 +75,9 @@ def compute_attribute(current_graph, node):
     return number_of_spammers, number_of_non_spammers
 
 
-
 # start
 # graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
-graph_path = 'graph/high_degree_partition_2.pickle'
+graph_path = 'graph/friendship_clean_attitude.pickle'
 graph = nx.read_gpickle(graph_path)
 macro_sum = 0
 micro_sum = 0

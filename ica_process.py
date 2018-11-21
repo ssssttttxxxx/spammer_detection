@@ -22,7 +22,6 @@ from sklearn.ensemble import RandomForestClassifier
 # configure
 run_times = 1
 training_set_size = 0.8
-print 'training set size', training_set_size
 iterations = 10
 shuffle_stat = 67
 attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree'] # degree variable is useless
@@ -102,8 +101,8 @@ def split_trainset_testset_deepwalk(graph, attributes):
 def remove_test_label(graph, delete_list):
     """
     remove the test set label on the graph data
-    :param graph:
-    :param delete_list:
+    :param graph: original graph
+    :param delete_list: test set for X
     :return:
     """
     # print
@@ -213,6 +212,8 @@ def aggregation_percentage(label1_num, label2_num):
 
 if __name__ == '__main__':
     # start
+    print 'training set size', training_set_size
+
     graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
     graph = nx.read_gpickle(graph_path)
 
