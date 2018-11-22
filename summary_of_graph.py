@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
-    graph_path_1 = 'graph/friendship_clean_attitude.pickle'
+    graph_path_1 = 'graph/firendship_new_label209579.pickle'
     graph_path_2 = 'graph/high_degree_partition_from_friendship_attr_total_cleanUnknown_cleanDegree0.pickle'
     graph_1 = nx.read_gpickle(graph_path_1)
     graph_2 = nx.read_gpickle(graph_path_2)
@@ -17,10 +17,10 @@ if __name__ == "__main__":
 
     num_spammer = 0
     num_normal = 0
-    for n in graph_2:
-        if graph_2.node[n]['fake'] == 1:
+    for n in graph_1:
+        if graph_1.node[n]['fake'] == 1:
             num_spammer += 1
-        elif graph_2.node[n]['fake'] == 0:
+        elif graph_1.node[n]['fake'] == 0:
             num_normal += 1
 
     print '1 is connected ?', nx.is_connected(graph_1)
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     print "spammers", num_spammer
     print 'non-spammers', num_normal
 
-    degree_sequence = sorted([d for n, d in graph_2.degree()], reverse=True)
+    degree_sequence = sorted([d for n, d in graph_1.degree()], reverse=True)
     degree_max = max(degree_sequence)
     print 'degree max', degree_max
 
