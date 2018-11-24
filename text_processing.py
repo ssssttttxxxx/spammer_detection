@@ -2,7 +2,7 @@
 
 import MySQLdb
 import networkx as nx
-
+import time
 
 class YelpData:
 
@@ -15,6 +15,12 @@ class YelpData:
         self.cursor.execute(sql)
         reviews_data = self.cursor.fetchall()
         return reviews_data
+
+    def read_reviewer(self, reviewerID):
+        sql = "select * from reviewers where id = '%s'" % reviewerID
+        self.cursor.execute(sql)
+        reviewer_data = self.cursor.fetchone()
+        return reviewer_data
 
 
 def number_of_reviews(review_data):
@@ -29,33 +35,15 @@ def average_number_of_words(review_data):
     return number_of_words/len(review_data)
 
 
-def number_of_pos_reviews(review_data):
-    pass
+def number_of_reviews_attitude():
+    """
+    add the attitude of the reviews to the graph
+    Parameters
+    ----------
+    Returns
+    -------
 
-
-def number_of_neg_reviews(review_data):
-    pass
-
-
-def number_of_reviews_one_day(review_data):
-    pass
-
-
-def ratio_of_pos_reviews(review_data):
-    pass
-
-
-def ratio_of_neg_reviews(review_data):
-    pass
-
-
-def second_degree_attr(review_data, graph, node_id):
-    neighors_1 = nx.neighbors(graph, graph.node[node_id])
-    for neighor in neighors_1:
-        print neighor
-
-
-if __name__ == "__main__":
+    """
     yd = YelpData()
 
     graph_path = 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle'
@@ -102,4 +90,61 @@ if __name__ == "__main__":
         graph.node[node_id]['neu_reviews'] = num_neu_reviews
 
     nx.write_gpickle(graph, 'graph/friendship_clean_attitude.pickle')
+
+
+def number_of_reviews_one_day(review_data):
+    pass
+
+
+def ratio_of_pos_reviews(review_data):
+    pass
+
+
+def ratio_of_neg_reviews(review_data):
+    pass
+
+
+def second_degree_attr(review_data, graph, node_id):
+    neighors_1 = nx.neighbors(graph, graph.node[node_id])
+    for neighor in neighors_1:
+        print neighor
+
+
+def identify_same_location_user_type():
+    yd = YelpData()
+
+    graph_path = 'graph/firendship_new_label209579.pickle'
+    graph = nx.read_gpickle(graph_path)
+
+    for num, node in enumerate(graph.nodes()):
+
+        if num % 1000 == 0:
+            print num
+            print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+
+        reviewer_data = yd.read_reviewer(node)
+        reviewer_location = reviewer_data[2]
+        neighbors = graph.neighbors(node)
+
+        same_location_spammer = 0
+        same_location_legitimate = 0
+
+        for neighbor in neighbors:
+            neighbor_data = yd.read_reviewer(neighbor)
+            neighbor_location = neighbor_data[2]
+            if neighbor_location == reviewer_location:
+                fake_flag = graph.node[neighbor]['fake']
+                if fake_flag == 1:
+                    same_location_spammer += 1
+                elif fake_flag == 0:
+                    same_location_legitimate += 1
+
+        graph.node[node]['same_location_spammer_num'] = same_location_spammer
+        graph.node[node]['same_location_legitimate_num'] = same_location_legitimate
+
+    nx.write_gpickle(graph, 'friendship_new_label_location.pickle')
+
+
+if __name__ == "__main__":
+    identify_same_location_user_type()
 

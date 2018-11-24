@@ -18,7 +18,7 @@ print 'training set size', trainset_size
 run_times = 1
 iterations = 20
 shuffle_stat = 42
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
+attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'neu_reviews', 'pos_reviews', 'neg_reviews']
 # attributes_name = ['reviewerID',]
 
 
@@ -32,6 +32,7 @@ def split_tarinset_testset(graph, attributes):
     Y_list = list()
     for i, node in enumerate(graph.nodes()):
         temp_list = list()
+        # print graph.node[node]
         for attr_name, val in graph.node[node].items():
 
             if attr_name in attributes:
@@ -136,15 +137,15 @@ for round_num in range(run_times):
     # over sampling
     # X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
 
-    # classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
+    classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
     # classifier = svm.SVC()
-    # classifier.fit(X_train_without_id, Y_train)
+    classifier.fit(X_train_without_id, Y_train)
 
-    import pickle
-    print
-    print "load classifier"
-    model_path = 'decision_tree_result/decision_tree_model42.sav'
-    classifier = pickle.load(open(model_path, 'rb'))
+    # import pickle
+    # print
+    # print "load classifier"
+    # model_path = 'decision_tree_result/decision_tree_model42.sav'
+    # classifier = pickle.load(open(model_path, 'rb'))
 
     print
     print "complete training"

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import networkx as nx
 import numpy as np
+from collections import Counter
 from ica_process import compute_attribute
 from sklearn import tree
 from sklearn.metrics import classification_report
@@ -9,7 +10,7 @@ from sklearn.model_selection import train_test_split
 s_times = 5
 run_times = 5
 iteration = 5
-shuffle_stat = 56
+shuffle_stat = 42
 training_set_size = 0.5
 
 
@@ -60,6 +61,15 @@ def remove_test_label(graph, delete_list):
         # print 'remove label of %s' % node[0]
     return current_graph
 
+def Most_Common(lst):
+    """
+    return the most common element in the list
+    :param lst:
+    :return:
+    """
+    data = Counter(lst)
+    return data.most_common(1)[0][0]
+
 
 attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
 # calculate the frequency and final label
@@ -73,7 +83,8 @@ attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
 # print 'final f1 micro is', f1_score(final_Y_test, final_label, average='micro')
 # print
 
-graph_path = "graph/high_degree_partition_2.pickle"
+# graph_path = "graph/high_degree_partition_2.pickle"
+graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
 graph = nx.read_gpickle(graph_path)
 
 x_train, x_test, y_train, y_test = split_trainset_testset(graph, attributes_name)
@@ -116,6 +127,10 @@ print train_x[:, 1:]
 # train the decision tree
 classifier_dtree = tree.DecisionTreeClassifier(random_state=shuffle_stat)
 classifier_dtree.fit(train_x[:, 1:], train_y)
+print '################### classifier result #####################'
+train_y_ = classifier_dtree.predict(train_x[:, 1:])
+print classification_report(train_y, train_y_)
+
 
 # predict the label of test set
 predict_y = classifier_dtree.predict(test_x[:, 1:])
@@ -125,11 +140,13 @@ combine_test_set = np.column_stack((test_x, predict_y.T))
 # assign the label on current graph
 for x_pre in combine_test_set:
     if int(x_pre[6]) > 1:
-        print 'fucking error'
+        print 'error'
         print x_pre[6]
     current_graph.node[x_pre[0]]['fake'] = x_pre[6]
 
 # burn-in
+print 'burn-in'
+print '#################################################'
 test_set = np.column_stack((test_x, test_y))
 print test_set.shape
 
@@ -138,13 +155,15 @@ print 'original', original_len
 
 for iteration in range(s_times):
 
+    # generate random order
     np.random.shuffle(test_set)
+
     x_t = test_set[:, 1:6]
     y_t = np.copy(test_set[:, 6]).astype(np.int8)
     y_predict = classifier_dtree.predict(x_t)
     # todo: predict一次更新一次
     print y_t.shape
-    print classification_report(y_t, y_predict)
+    print classification_report(y_t, y_predict, digits=6)
 
     # combine into the last column in the test set (np.array)
     test_set = np.column_stack((test_set, y_predict))
@@ -158,18 +177,21 @@ test_set = np.column_stack((test_x, test_y))
 print 'init', test_set.shape
 
 # collect samples
+print 'collect samples'
+print '#################################################'
+
 original_len = test_set.shape[1]
-print 'original', original_len
 
 for iteration in range(run_times):
 
-    np.random.shuffle(test_set)
+    # np.random.shuffle(test_set)
+    print 'begin with', test_set[0]
     x_t = test_set[:, 1:6]
     y_t = np.copy(test_set[:, 6]).astype(np.int8)
     y_predict = classifier_dtree.predict(x_t)
     # todo: predict一次更新一次
     print y_t.shape
-    print classification_report(y_t, y_predict)
+    print classification_report(y_t, y_predict, digits=6)
 
     # combine into the last column in the test set (np.array)
     test_set = np.column_stack((test_set, y_predict))
@@ -178,6 +200,14 @@ for iteration in range(run_times):
     for x_label_pre in test_set:
         current_graph.node[x_label_pre[0]]['fake'] = x_label_pre[original_len+iteration]
 
-
 node_ids = np.copy(test_set[:, 0])
+real_label = np.copy(test_set[:, 6])
 labels_distribution = np.copy(test_set[:, 7:])
+node_label_dist = np.column_stack((node_ids, labels_distribution))
+# print node_label_dist
+node_label_dict = dict()
+for r in node_label_dist:
+    node_label_dict[r[0]] = Most_Common(r[1:])
+
+print '########################### final result #############################'
+print classification_report(real_label, node_label_dict.values(), digits=6)
