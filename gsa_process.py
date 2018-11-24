@@ -2,16 +2,37 @@
 import networkx as nx
 import numpy as np
 from collections import Counter
-from ica_process import compute_attribute
 from sklearn import tree
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
 
 s_times = 5
-run_times = 5
+run_times = 20
 iteration = 5
 shuffle_stat = 42
 training_set_size = 0.5
+attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
+
+
+def compute_attribute(current_graph, node):
+    """
+    compute attributes according to current graph
+    :param current_graph:
+    :param node:
+    :return:
+    """
+    neighbors = current_graph.neighbors(node)
+    number_of_spammers = 0
+    number_of_non_spammers = 0
+
+    for neighbor in neighbors:
+        if int(current_graph.node[neighbor]['fake']) == 1:
+            number_of_spammers += 1
+        elif int(current_graph.node[neighbor]['fake']) == 0:
+            number_of_non_spammers += 1
+        else:
+            continue
+    return number_of_spammers, number_of_non_spammers
 
 
 def split_trainset_testset(graph, attributes):
@@ -61,6 +82,7 @@ def remove_test_label(graph, delete_list):
         # print 'remove label of %s' % node[0]
     return current_graph
 
+
 def Most_Common(lst):
     """
     return the most common element in the list
@@ -70,18 +92,6 @@ def Most_Common(lst):
     data = Counter(lst)
     return data.most_common(1)[0][0]
 
-
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num']
-# calculate the frequency and final label
-# final_label = list()
-# for X in final_X_test:
-#     label_list = Y_all_predict[X[0]]
-#     final_label.append(Most_Common(label_list))
-#
-# print 'final recall rate is', recall_score(final_Y_test, final_label, average='binary')
-# print 'final f1 macro is', f1_score(final_Y_test, final_label, average='macro')
-# print 'final f1 micro is', f1_score(final_Y_test, final_label, average='micro')
-# print
 
 # graph_path = "graph/high_degree_partition_2.pickle"
 graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
@@ -122,7 +132,6 @@ print train_x.shape
 print train_y.shape
 print test_x.shape
 print test_y.shape
-print train_x[:, 1:]
 
 # train the decision tree
 classifier_dtree = tree.DecisionTreeClassifier(random_state=shuffle_stat)
@@ -142,11 +151,14 @@ for x_pre in combine_test_set:
     if int(x_pre[6]) > 1:
         print 'error'
         print x_pre[6]
-    current_graph.node[x_pre[0]]['fake'] = x_pre[6]
+
+    # print 'before assignment', current_graph.node[x_pre[0]]
+    current_graph.node[x_pre[0]]['fake'] = int(x_pre[6])
+    # print 'after assignment', current_graph.node[x_pre[0]]
+
 
 # burn-in
-print 'burn-in'
-print '#################################################'
+print '###################### burn-in ###########################'
 test_set = np.column_stack((test_x, test_y))
 print test_set.shape
 
@@ -157,6 +169,13 @@ for iteration in range(s_times):
 
     # generate random order
     np.random.shuffle(test_set)
+
+    # update attributes of node
+    for t in test_set:
+        node_id = t[0]
+        spammer_num, legitimate_num = compute_attribute(current_graph, node_id)
+        t[4] = spammer_num
+        t[5] = legitimate_num
 
     x_t = test_set[:, 1:6]
     y_t = np.copy(test_set[:, 6]).astype(np.int8)
@@ -177,15 +196,21 @@ test_set = np.column_stack((test_x, test_y))
 print 'init', test_set.shape
 
 # collect samples
-print 'collect samples'
-print '#################################################'
+print '######################## collect samples #########################'
 
 original_len = test_set.shape[1]
 
 for iteration in range(run_times):
 
-    # np.random.shuffle(test_set)
-    print 'begin with', test_set[0]
+    np.random.shuffle(test_set)
+
+    # update attributes of node
+    for t in test_set:
+        node_id = t[0]
+        spammer_num, legitimate_num = compute_attribute(current_graph, node_id)
+        t[4] = spammer_num
+        t[5] = legitimate_num
+
     x_t = test_set[:, 1:6]
     y_t = np.copy(test_set[:, 6]).astype(np.int8)
     y_predict = classifier_dtree.predict(x_t)
@@ -201,13 +226,13 @@ for iteration in range(run_times):
         current_graph.node[x_label_pre[0]]['fake'] = x_label_pre[original_len+iteration]
 
 node_ids = np.copy(test_set[:, 0])
-real_label = np.copy(test_set[:, 6])
-labels_distribution = np.copy(test_set[:, 7:])
+real_label = np.copy(test_set[:, 6].astype(np.int8))
+labels_distribution = np.copy(test_set[:, 7:].astype(np.int8))
 node_label_dist = np.column_stack((node_ids, labels_distribution))
-# print node_label_dist
-node_label_dict = dict()
+
+node_label_predict = list()
 for r in node_label_dist:
-    node_label_dict[r[0]] = Most_Common(r[1:])
+    node_label_predict.append(int(Most_Common(r[1:])))
 
 print '########################### final result #############################'
-print classification_report(real_label, node_label_dict.values(), digits=6)
+print classification_report(real_label, node_label_predict, digits=6)
