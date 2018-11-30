@@ -4,16 +4,16 @@ import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
-    graph_path_1 = 'graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle'
-    graph_path_2 = 'graph/high_degree_partition_from_friendship_attr_total_cleanUnknown_cleanDegree0.pickle'
+    graph_path_1 = 'graph/new_friendship_connected.pickle'
+    # graph_path_2 = 'graph/high_degree_partition_from_friendship_attr_total_cleanUnknown_cleanDegree0.pickle'
     graph_1 = nx.read_gpickle(graph_path_1)
-    graph_2 = nx.read_gpickle(graph_path_2)
+    # graph_2 = nx.read_gpickle(graph_path_2)
     print "graph 1"
-    print graph_1.number_of_nodes()
-    print graph_1.number_of_edges()
-    print "graph 2"
-    print graph_2.number_of_nodes()
-    print graph_2.number_of_edges()
+    print 'nodes', graph_1.number_of_nodes()
+    print 'edges', graph_1.number_of_edges()
+    # print "graph 2"
+    # print graph_2.number_of_nodes()
+    # print graph_2.number_of_edges()
 
     num_spammer = 0
     num_normal = 0
@@ -27,7 +27,8 @@ if __name__ == "__main__":
 
     print "spammers", num_spammer
     print 'non-spammers', num_normal
-
+    print list(graph_1.nodes(data=True))[0]
+    # print 'attributes', graph_1.node[graph_1.nodes()[0]]
     degree_sequence = sorted([d for n, d in graph_1.degree()], reverse=True)
     degree_max = max(degree_sequence)
     print 'degree max', degree_max

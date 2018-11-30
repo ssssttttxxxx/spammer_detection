@@ -14,7 +14,7 @@ from collections import defaultdict
 from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score, \
     classification_report
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from imblearn.over_sampling import SMOTE, RandomOverSampler
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
@@ -23,8 +23,8 @@ from sklearn.ensemble import RandomForestClassifier
 run_times = 1
 training_set_size = 0.8
 iterations = 10
-shuffle_stat = 67
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree'] # degree variable is useless
+shuffle_stat = 42
+attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree', 'pos_reviews', 'neg_reviews', 'neu_reviews']  # degree variable is useless
 # attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', ]
 # attributes_name = ['reviewerID', ]
 
@@ -214,15 +214,26 @@ if __name__ == '__main__':
     # start
     print 'training set size', training_set_size
 
-    graph_path = "graph/friendship_reviewer_label_attr_clean_unknown_degree0.pickle"
+    graph_path = "graph/firendship_new_label209579.pickle"
     graph = nx.read_gpickle(graph_path)
 
     for round_num in range(run_times):
-        # 分成测试集训练集
+        # split into train set and test set
         X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
+        Y_train = array(Y_train).astype(float)
+        Y_test = array(Y_test).astype(float)
+
         print
         print 'training set', len(X_train)
         print 'test set', len(X_test)
+
+        print "training set '1': {}".format(sum(Y_train == 1))
+        print "test set '1' : {}".format(sum(Y_test == 1))
+        print 'label 1 ratio: ', float(sum(Y_train == 1)) / (sum(Y_train == 1) + sum(Y_test == 1))
+
+        print "training set '0': {}".format(sum(Y_train == 0))
+        print "test set '0' : {}".format(sum(Y_test == 0))
+        print 'label 0 ratio: ', float(sum(Y_train == 0)) / (sum(Y_train == 0) + sum(Y_test == 0))
 
         # final_X_test = copy.deepcopy(X_test)
         # final_Y_test = copy.deepcopy(Y_test)
@@ -230,12 +241,7 @@ if __name__ == '__main__':
         # remove label of nodes in test set
         current_graph = remove_test_label(graph, X_test)
 
-        # compute relational attributes using only known nodes
-        # print
-        # print "computing the relational attributes"
-        # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-
-        # 处理训练集
+        # processing the training set
         zero_zero_num = 0  # record the number of node whose neighbors are all belonged to test set
 
         for l in X_train:
@@ -261,39 +267,41 @@ if __name__ == '__main__':
             # l.append(number_of_second_spammers)
             # l.append(number_of_second_non_spammer)
 
-        # print 'node 0-0:', zero_zero_num
-
         X_train_without_id = [node[1:] for node in X_train]
         X_train_without_id = array(X_train_without_id).astype(float)
         Y_train = array(Y_train).astype(float)
 
-        # 过采样
-        # X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
+        # over sampling
+        X_over_sample, Y_over_sample = SMOTE_over_sampling(X_train_without_id, Y_train)
 
-        # 训练分类器
+        # train the classifier
         print
         print 'dimension of training features', len(X_train_without_id[0])
-        # print
-        # print "training classifier"
-        # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-
         classifier = tree.DecisionTreeClassifier(random_state=shuffle_stat)
         # classifier = GaussianNB()
         # classifier = RandomForestClassifier()
-        classifier.fit(X_train_without_id, Y_train)
-        # print
-        # print "complete training"
-        # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
+
+        # cross validate
+        # validate_score = cross_val_score(classifier, X_train_without_id, Y_train,
+        #                                  cv=10)
+        # print 'cross validate score', validate_score
+        # classifier.fit(X_train_without_id, Y_train)
+
+        # if use over sampling
+        # cross validate
+        validate_score = cross_val_score(classifier, X_over_sample, Y_over_sample,
+                                         cv=10)
+        print 'cross validate score', validate_score
+        classifier.fit(X_over_sample, Y_over_sample)
 
         filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
         pickle.dump(classifier, open(filename, 'wb'))
 
-        # print
-        # print "load classifier"
+        # load classifier
         # model_path = 'decision_tree_result/decision_tree_model42.sav'
         # classifier = pickle.load(open(model_path, 'rb'))
 
-        # 测试分类器对训练集的分类效果
+        # see the prediction result on training set
         Y_train_predict = list()
         for l in X_train:
             Y_train_predict.append(classifier.predict([l[1:]]))
@@ -306,7 +314,8 @@ if __name__ == '__main__':
         for X in X_test_copy:
             node_id = X[0]
             number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
-            # spammers_percentage, non_spammers_persentage = aggregation_percentage(number_of_spammers, number_of_non_spammers)
+            # spammers_percentage, non_spammers_persentage = aggregation_percentage(number_of_spammers,
+            #                                                                       number_of_non_spammers)
             # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph,
             #                                                                                            node_id)
 
@@ -316,9 +325,9 @@ if __name__ == '__main__':
             # X.append(number_of_second_non_spammer)
             X_test_without_id = X[1:]
             X_test_fit = array(X_test_without_id).astype(float)
-
             Y_ = classifier.predict([X_test_fit])
             Y_predict.append(Y_)
+
             # update
             current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
             current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
@@ -330,12 +339,8 @@ if __name__ == '__main__':
         acc = accuracy_score(Y_test, Y_predict)
         print classification_report(Y_test, Y_predict, digits=4)
         print '------------------------------------------------------------------'
-        # print
-        # print "recall rate is ", recall_rate
-        # print "f1 macro is", macro
-        # print "f1 micro is", micro
 
-        # 使用ica算法
+        # use ica
         # predict the label of unknown node
         Y_all_predict = defaultdict(list)  # include all the label prediction of each iteration
 

@@ -55,9 +55,6 @@ class CalculateCentrality:
         # get the major part of the graph
         connected_subgraphs = list(nx.connected_components(self.graph))
         print len(connected_subgraphs)
-        for i, sub in enumerate(connected_subgraphs):
-            print i
-            print 'number', len(sub)
 
         # connected_graph = connected_subgraphs[0]
         print "begin betweenness cal", time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
@@ -69,6 +66,12 @@ class CalculateCentrality:
                 break
             print iter
             print item
+
+        # write the betweenness in the graph
+        for node_id in self.graph.nodes():
+            self.graph.node[node_id]['betweenness'] = all_node_betweenness[node_id]
+
+        nx.write_gpickle(self.graph, 'graph/new_friendship_betweenness.gpickle')
 
     def closeness_centrality(self):
         pass
