@@ -18,10 +18,12 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from imblearn.over_sampling import SMOTE, RandomOverSampler
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+
 
 # configure
 run_times = 1
-training_set_size = 0.8
+training_set_size = 0.5
 iterations = 10
 shuffle_stat = 42
 attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree', 'pos_reviews', 'neg_reviews', 'neu_reviews']  # degree variable is useless
@@ -176,7 +178,7 @@ def SMOTE_over_sampling(X_train, X_label):
     X_label = array(X_label).astype(float)
     print('Original dataset shape {}'.format(Counter(X_label)))
 
-    sm = SMOTE(random_state=shuffle_stat)
+    sm = SMOTE(0.8, random_state=shuffle_stat)
     over_samples_X, over_samples_Y = sm.fit_sample(X_train, X_label)
     print("After OverSampling, counts of label '1': {}".format(sum(over_samples_Y == 1)))
     print("After OverSampling, counts of label '0': {}".format(sum(over_samples_Y == 0)))
@@ -278,9 +280,11 @@ if __name__ == '__main__':
         print
         print 'dimension of training features', len(X_train_without_id[0])
         classifier = tree.DecisionTreeClassifier(random_state=shuffle_stat)
+        # classifier = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial', max_iter=1000)
         # classifier = GaussianNB()
         # classifier = RandomForestClassifier()
 
+        # if don't use over sampling
         # cross validate
         # validate_score = cross_val_score(classifier, X_train_without_id, Y_train,
         #                                  cv=10)

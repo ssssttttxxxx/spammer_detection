@@ -83,14 +83,8 @@ def plt_bar_for_all_degree(G):
 
 def plt_bar_division(G):
     """
-
-    Parameters
-    ----------
-    G: graph
-
-    Returns
-    -------
-
+    :param G: graph
+    :return:
     """
     # divede the spammer and legitimate user
     spammer_list = list()
@@ -116,7 +110,8 @@ def plt_bar_division(G):
     draw_bar(spammer_degree_count)
     draw_bar(legitimate_degree_count)
 
+
 if __name__ == '__main__':
-    graph_path = "graph/high_degree_partition_2.pickle"
+    graph_path = "graph/new_friendship_connected.pickle"
     G = nx.read_gpickle(graph_path)
     plt_bar_division(G)
