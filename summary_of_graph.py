@@ -20,6 +20,9 @@ if __name__ == "__main__":
     for n in graph_1:
         if graph_1.node[n]['fake'] == 1:
             num_spammer += 1
+            if num_spammer < 5:
+                print 'spammer example', num_spammer, graph_1.node[n]
+
         elif graph_1.node[n]['fake'] == 0:
             num_normal += 1
 

@@ -142,7 +142,7 @@ def identify_same_location_user_type():
         graph.node[node]['same_location_spammer_num'] = same_location_spammer
         graph.node[node]['same_location_legitimate_num'] = same_location_legitimate
 
-    nx.write_gpickle(graph, 'friendship_new_label_location.pickle')
+    nx.write_gpickle(graph, 'graph/friendship_new_label_location.pickle')
 
 
 if __name__ == "__main__":

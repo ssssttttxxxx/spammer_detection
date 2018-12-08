@@ -23,7 +23,7 @@ from sklearn.linear_model import LogisticRegression
 
 # configure
 run_times = 1
-training_set_size = 0.5
+training_set_size = 0.9
 iterations = 10
 shuffle_stat = 42
 attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree', 'pos_reviews', 'neg_reviews', 'neu_reviews']  # degree variable is useless
@@ -274,7 +274,7 @@ if __name__ == '__main__':
         Y_train = array(Y_train).astype(float)
 
         # over sampling
-        X_over_sample, Y_over_sample = SMOTE_over_sampling(X_train_without_id, Y_train)
+        # X_over_sample, Y_over_sample = SMOTE_over_sampling(X_train_without_id, Y_train)
 
         # train the classifier
         print
@@ -286,33 +286,34 @@ if __name__ == '__main__':
 
         # if don't use over sampling
         # cross validate
-        # validate_score = cross_val_score(classifier, X_train_without_id, Y_train,
-        #                                  cv=10)
-        # print 'cross validate score', validate_score
-        # classifier.fit(X_train_without_id, Y_train)
+        validate_score = cross_val_score(classifier, X_train_without_id, Y_train,
+                                         cv=10)
+        print 'cross validate score', validate_score
+        classifier.fit(X_train_without_id, Y_train)
 
         # if use over sampling
         # cross validate
-        validate_score = cross_val_score(classifier, X_over_sample, Y_over_sample,
-                                         cv=10)
-        print 'cross validate score', validate_score
-        classifier.fit(X_over_sample, Y_over_sample)
+        # validate_score = cross_val_score(classifier, X_over_sample, Y_over_sample,
+        #                                  cv=10)
+        # print 'cross validate score', validate_score
+        # classifier.fit(X_over_sample, Y_over_sample)
 
-        filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
-        pickle.dump(classifier, open(filename, 'wb'))
+        # save the classifier in pickle
+        # filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
+        # pickle.dump(classifier, open(filename, 'wb'))
 
         # load classifier
         # model_path = 'decision_tree_result/decision_tree_model42.sav'
         # classifier = pickle.load(open(model_path, 'rb'))
 
-        # see the prediction result on training set
+        # check the prediction result on training set
         Y_train_predict = list()
         for l in X_train:
             Y_train_predict.append(classifier.predict([l[1:]]))
         print classification_report(Y_train, Y_train_predict)
         print '----------------------------------------------------------------'
 
-        # 直接使用分类器
+        # check the performance of classifier without collective classification
         Y_predict = list()
         X_test_copy = copy.deepcopy(X_test)
         for X in X_test_copy:
@@ -337,14 +338,10 @@ if __name__ == '__main__':
             current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
             current_graph.node[node_id]['fake'] = int(Y_)
 
-        micro = f1_score(Y_test, Y_predict, average='micro')
-        macro = f1_score(Y_test, Y_predict, average='macro')
-        recall_rate = recall_score(Y_test, Y_predict)
-        acc = accuracy_score(Y_test, Y_predict)
         print classification_report(Y_test, Y_predict, digits=4)
         print '------------------------------------------------------------------'
 
-        # use ica
+        # ICA
         # predict the label of unknown node
         Y_all_predict = defaultdict(list)  # include all the label prediction of each iteration
 
