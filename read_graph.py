@@ -53,7 +53,7 @@ class ReadFriendshipGraph:
         determine the spammer by the percentage of fake reviews that a person publish
         :return:
         """
-        cut_value = 0.5
+        cut_value = 0.8
 
         fake_sql = "select count(*) from reviews_simple where reviewerID = '%s' and fake = 1" % reviewer_id
         legitimate_sql = "select count(*) from reviews_simple where reviewerID = '%s' and fake = 0" % reviewer_id
@@ -115,7 +115,7 @@ class ReadFriendshipGraph:
                 if num != 0:
                     os.remove("graph/firendship_new_label%d.pickle" % (num - record_unit))
 
-        nx.write_gpickle(self.friendship_graph, "graph/firendship_new_label%d.pickle" % num)
+        nx.write_gpickle(self.friendship_graph, "graph/firendship_0.8fake_%d.pickle" % num)
 
     def create_temporary_test(self):
         sql = "create temporary table reviewID_fake select id, reviewerID, fake from reviews "
