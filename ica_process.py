@@ -1,34 +1,44 @@
 # -*- coding: utf-8 -*-
-import time
 import copy
+import decimal
 import pickle
 import random
-import pandas as pd
 from numpy import array
-import pickle
 import networkx as nx
 from collections import Counter
 from sklearn import tree
 from sklearn.utils import shuffle
 from collections import defaultdict
-from sklearn.metrics import accuracy_score, f1_score, precision_score, precision_recall_curve, recall_score, \
-    classification_report
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split, cross_val_score
 from imblearn.over_sampling import SMOTE, RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
+from sklearn.preprocessing import StandardScaler
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-
+from read_training_test_set import read_data_from_file
+from func_may_useful.write_report_in_file import classification_report_csv
 
 # configure
+standardize_flag = 1  # 1 for turning on standardization
 run_times = 1
-training_set_size = 0.9
-iterations = 10
+# training_set_size = 0.3
+training_set_list = [decimal.Decimal(x)/decimal.Decimal(10) for x in range(1, 10)]
+classifier_name = 'Naive Bayes ass3'
+print training_set_list
+iterations = 20
 shuffle_stat = 42
-attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'degree', 'pos_reviews', 'neg_reviews', 'neu_reviews']  # degree variable is useless
+attributes_name = ['reviewerID', 'friends_num',
+                   'reviews_num', 'photo_num',
+                   'degree', 'pos_reviews',
+                   'neg_reviews', 'neu_reviews',
+                   'betweenness', 'closeness']
+updating_attr_name = ['spammers_num', 'legitimates_num']
+# degree variable is useless
 # attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', ]
 # attributes_name = ['reviewerID', ]
+dimension_of_attr = len(attributes_name) + len(updating_attr_name) - 1
 
 
 def split_trainset_testset(graph, attributes):
@@ -41,10 +51,12 @@ def split_trainset_testset(graph, attributes):
     # print
     # print "split train set and test set "
     # print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-
     X_list = list()
     Y_list = list()
     for i, node in enumerate(graph.nodes()):
+        if i == 1:
+            print graph.node[node], 'spammers_num', 'legitimates_num'
+
         temp_list = list()
         for attr_name, val in graph.node[node].items():
 
@@ -100,6 +112,16 @@ def split_trainset_testset_deepwalk(graph, attributes):
     return X_train, X_test, Y_train, Y_test
 
 
+def load_trainset_testset(training_size):
+    tr_path = 'train_test_data_set/%s/training_set.csv' % training_size
+    tr_label_path = 'train_test_data_set/%s/label_training_set.csv' % training_size
+    te_path = 'train_test_data_set/%s/test_set.csv' % training_size
+    te_label_path = 'train_test_data_set/%s/label_test_set.csv' % training_size
+
+    tr, tr_label, te, te_label = read_data_from_file(tr_path, tr_label_path, te_path, te_label_path)
+    return tr.tolist(), te.tolist(), tr_label.tolist(), te_label.tolist()
+
+
 def remove_test_label(graph, delete_list):
     """
     remove the test set label on the graph data
@@ -139,7 +161,7 @@ def compute_attribute(current_graph, node):
     return number_of_spammers, number_of_non_spammers
 
 
-def Most_Common(lst):
+def most_common(lst):
     """
     return the most common element in the list
     :param lst:
@@ -185,6 +207,30 @@ def SMOTE_over_sampling(X_train, X_label):
     return over_samples_X, over_samples_Y
 
 
+def random_over_sampling(X_train, X_label):
+    X_train = array(X_train).astype(float)
+    X_label = array(X_label).astype(float)
+    print('Original dataset shape {}'.format(Counter(X_label)))
+
+    ros = RandomOverSampler(random_state=shuffle_stat)
+    over_samples_X, over_samples_Y = ros.fit_resample(X_train, X_label)
+    print("After OverSampling, counts of label '1': {}".format(sum(over_samples_Y == 1)))
+    print("After OverSampling, counts of label '0': {}".format(sum(over_samples_Y == 0)))
+    return over_samples_X, over_samples_Y
+
+
+def random_under_sampling(X_train, X_label):
+    X_train = array(X_train).astype(float)
+    X_label = array(X_label).astype(float)
+    print 'Original data set shape {}'.format(Counter(X_label))
+
+    rus = RandomUnderSampler(random_state=shuffle_stat)
+    under_samples_X, under_samples_Y = rus.fit_resample(X_train, X_label)
+    print "After UnderSampling, counts of label '1': {}".format(sum(under_samples_Y == 1))
+    print "After UnderSampling, counts of label '0': {}".format(sum(under_samples_Y == 0))
+    return under_samples_X, under_samples_Y
+
+
 def compute_second_degree_attributes(current_graph, node):
     neighbors = current_graph.neighbors(node)
     number_of_second_spammers = 0
@@ -212,20 +258,25 @@ def aggregation_percentage(label1_num, label2_num):
     return label1_percentage, label2_percentage
 
 
+def standardize_data(scaler_ica, x_single):
+    return scaler_ica.transform(x_single)
+
+
 if __name__ == '__main__':
     # start
-    print 'training set size', training_set_size
+    # print 'training set size', training_set_size
 
-    graph_path = "graph/firendship_new_label209579.pickle"
+    graph_path = "graph/new_friendship_connected.pickle"
     graph = nx.read_gpickle(graph_path)
 
-    for round_num in range(run_times):
+    for training_set_size in training_set_list:
         # split into train set and test set
-        X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
+        # X_train, X_test, Y_train, Y_test = split_trainset_testset(graph, attributes_name)
+        X_train, X_test, Y_train, Y_test = load_trainset_testset(training_set_size)
         Y_train = array(Y_train).astype(float)
         Y_test = array(Y_test).astype(float)
 
-        print
+        print '-----------------------------------------------------------'
         print 'training set', len(X_train)
         print 'test set', len(X_test)
 
@@ -236,10 +287,7 @@ if __name__ == '__main__':
         print "training set '0': {}".format(sum(Y_train == 0))
         print "test set '0' : {}".format(sum(Y_test == 0))
         print 'label 0 ratio: ', float(sum(Y_train == 0)) / (sum(Y_train == 0) + sum(Y_test == 0))
-
-        # final_X_test = copy.deepcopy(X_test)
-        # final_Y_test = copy.deepcopy(Y_test)
-
+        print '-----------------------------------------------------------'
         # remove label of nodes in test set
         current_graph = remove_test_label(graph, X_test)
 
@@ -250,10 +298,16 @@ if __name__ == '__main__':
             node_id = l[0]
 
             number_of_spammers, number_of_non_spammers = compute_attribute(current_graph, node_id)
-            # spammers_percentage, non_spammers_persentage = aggregation_percentage(number_of_spammers, number_of_non_spammers)
 
-            # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph,
-            #                                                                                            node_id)
+            # spammers_percentage, non_spammers_persentage = aggregation_percentage(
+            # number_of_spammers,
+            # number_of_non_spammers
+            # )
+
+            # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(
+            # current_graph,
+            # node_id
+            # )
 
             if current_graph.node[node_id].get('spammer_neighbors_num'):
                 # continue  # when use sampling method, use following
@@ -266,6 +320,7 @@ if __name__ == '__main__':
             current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
             l.append(number_of_spammers)
             l.append(number_of_non_spammers)
+
             # l.append(number_of_second_spammers)
             # l.append(number_of_second_non_spammer)
 
@@ -273,15 +328,22 @@ if __name__ == '__main__':
         X_train_without_id = array(X_train_without_id).astype(float)
         Y_train = array(Y_train).astype(float)
 
-        # over sampling
-        # X_over_sample, Y_over_sample = SMOTE_over_sampling(X_train_without_id, Y_train)
+        # standardize
+        if standardize_flag == 1:
+            scaler_ica = StandardScaler()
+            scaler_ica.fit(X_train_without_id)
+            X_train_without_id = standardize_data(scaler_ica, X_train_without_id)
+            # print X_train_without_id
+
+        # over/under sampling
+        # X_sampling, Y_sampling = random_under_sampling(X_train_without_id, Y_train)
 
         # train the classifier
         print
-        print 'dimension of training features', len(X_train_without_id[0])
-        classifier = tree.DecisionTreeClassifier(random_state=shuffle_stat)
-        # classifier = LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial', max_iter=1000)
-        # classifier = GaussianNB()
+        print 'dimension of training features', dimension_of_attr
+        # classifier = tree.DecisionTreeClassifier(random_state=shuffle_stat)
+        # classifier = LogisticRegression(random_state=0, solver='lbfgs', multi_class='auto', max_iter=1000, C=0.5)
+        classifier = GaussianNB()
         # classifier = RandomForestClassifier()
 
         # if don't use over sampling
@@ -290,13 +352,13 @@ if __name__ == '__main__':
                                          cv=10)
         print 'cross validate score', validate_score
         classifier.fit(X_train_without_id, Y_train)
-
-        # if use over sampling
+        # if use over/under sampling
         # cross validate
-        # validate_score = cross_val_score(classifier, X_over_sample, Y_over_sample,
+        # validate_score = cross_val_score(classifier, X_sampling, Y_sampling,
         #                                  cv=10)
         # print 'cross validate score', validate_score
-        # classifier.fit(X_over_sample, Y_over_sample)
+        # classifier.fit(X_sampling, Y_sampling)
+        # print 'features importance', classifier.feature_importances_
 
         # save the classifier in pickle
         # filename = 'decision_tree_result/decision_tree_model%d.sav' % shuffle_stat
@@ -309,7 +371,9 @@ if __name__ == '__main__':
         # check the prediction result on training set
         Y_train_predict = list()
         for l in X_train:
-            Y_train_predict.append(classifier.predict([l[1:]]))
+            single_data = array(l[1:]).astype('float64').reshape(1, len(l[1:]))
+            Y_train_predict.append(classifier.predict(single_data))
+            # Y_train_predict.append(classifier.predict([l[1:]]))
         print classification_report(Y_train, Y_train_predict)
         print '----------------------------------------------------------------'
 
@@ -328,17 +392,24 @@ if __name__ == '__main__':
             X.append(number_of_non_spammers)
             # X.append(number_of_second_spammers)
             # X.append(number_of_second_non_spammer)
+
             X_test_without_id = X[1:]
+
+            # standardize
+            if standardize_flag == 1:
+                X_test_without_id = standardize_data(scaler_ica, [X_test_without_id])
+
             X_test_fit = array(X_test_without_id).astype(float)
-            Y_ = classifier.predict([X_test_fit])
+            Y_ = classifier.predict(X_test_fit.reshape(1, dimension_of_attr))
             Y_predict.append(Y_)
 
             # update
             current_graph.node[node_id]['spammer_neighbors_num'] = number_of_spammers
             current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
             current_graph.node[node_id]['fake'] = int(Y_)
-
-        print classification_report(Y_test, Y_predict, digits=4)
+        report = classification_report(Y_test, Y_predict, digits=6)
+        classification_report_csv(report, training_set_size, 'compared ' + classifier_name)
+        print classification_report(Y_test, Y_predict, digits=6)
         print '------------------------------------------------------------------'
 
         # ICA
@@ -355,6 +426,13 @@ if __name__ == '__main__':
             # generate random order
             X_test, Y_test = shuffle(X_test, Y_test, random_state=iteration)
 
+            # validate
+            # for i, X in enumerate(X_test):
+            #     print X
+            #     print current_graph.node[X[0]]
+            #     if i > 5:
+            #         break
+
             for X_single in X_test:
                 X = copy.deepcopy(X_single)
                 node_id = X[0]
@@ -364,14 +442,22 @@ if __name__ == '__main__':
                 # spammers_percentage, non_spammers_persentage = aggregation_percentage(number_of_spammers,
                 #                                                                       number_of_non_spammers)
 
-                # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(current_graph, node_id)
+                # number_of_second_spammers, number_of_second_non_spammer = compute_second_degree_attributes(
+                # current_graph,
+                # node_id)
+                
                 X.append(number_of_spammers)
                 X.append(number_of_non_spammers)
                 # X.append(number_of_second_spammers)
                 # X.append(number_of_second_non_spammer)
                 X_test_without_id = X[1:]
+
+                # standardize
+                if standardize_flag == 1:
+                    X_test_without_id = standardize_data(scaler_ica, [X_test_without_id])
+
                 X_test_fit = array(X_test_without_id).astype(float)
-                label_predict = classifier.predict([X_test_fit])
+                label_predict = classifier.predict(X_test_fit.reshape(1, dimension_of_attr))
                 Y_predict.append(int(label_predict))
                 Y_all_predict[X[0]].append(int(label_predict))
 
@@ -380,11 +466,7 @@ if __name__ == '__main__':
                 current_graph.node[node_id]['non_spammer_neighbors_num'] = number_of_non_spammers
                 current_graph.node[node_id]['fake'] = int(label_predict)
 
-            micro = f1_score(Y_test, Y_predict, average='micro')
-            macro = f1_score(Y_test, Y_predict, average='macro')
-            recall_rate = recall_score(Y_test, Y_predict)
             acc = accuracy_score(Y_test, Y_predict)
+            report = classification_report(Y_test, Y_predict, digits=6)
             print classification_report(Y_test, Y_predict, digits=6)
-            # print "recall rate is ", recall_rate
-            # print "f1 macro is", macro
-            # print "f1 micro is", micro
+        classification_report_csv(report, training_set_size, classifier_name)

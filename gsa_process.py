@@ -5,6 +5,7 @@ from collections import Counter
 from sklearn import tree
 from sklearn.metrics import classification_report
 from sklearn.model_selection import train_test_split
+from read_training_test_set import read_data_from_file
 
 s_times = 5
 run_times = 20
@@ -69,6 +70,16 @@ def split_trainset_testset(graph, attributes):
     return X_train, X_test, Y_train, Y_test
 
 
+def load_trainset_testset(training_size):
+    tr_path = 'train_test_data_set/%s/training_set.csv' % training_size
+    tr_label_path = 'train_test_data_set/%s/label_training_set.csv' % training_size
+    te_path = 'train_test_data_set/%s/test_set.csv' % training_size
+    te_label_path = 'train_test_data_set/%s/label_test_set.csv' % training_size
+
+    tr, tr_label, te, te_label = read_data_from_file(tr_path, tr_label_path, te_path, te_label_path)
+    return tr.tolist(), te.tolist(), tr_label.tolist(), te_label.tolist()
+
+
 def remove_test_label(graph, delete_list):
     """
     remove the test set label on the graph data
@@ -83,7 +94,7 @@ def remove_test_label(graph, delete_list):
     return current_graph
 
 
-def Most_Common(lst):
+def most_common(lst):
     """
     return the most common element in the list
     :param lst:
@@ -232,7 +243,7 @@ node_label_dist = np.column_stack((node_ids, labels_distribution))
 
 node_label_predict = list()
 for r in node_label_dist:
-    node_label_predict.append(int(Most_Common(r[1:])))
+    node_label_predict.append(int(most_common(r[1:])))
 
 print '########################### final result #############################'
 print classification_report(real_label, node_label_predict, digits=6)

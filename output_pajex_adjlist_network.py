@@ -7,4 +7,4 @@ graph = nx.read_gpickle(graph_path)
 
 # nx.write_pajek(graph, 'pajek/separate_spammer_pajek.net')
 # nx.write_pajek(graph, 'pajek/separate_spammer_771487.net')
-nx.write_adjlist(graph, 'graph/old_friendship_connected.adjlist')
+nx.write_edgelist(graph, 'graph/old_friendship_connected.edgelist')

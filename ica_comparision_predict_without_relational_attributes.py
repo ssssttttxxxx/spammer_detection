@@ -9,11 +9,12 @@ import networkx as nx
 from sklearn import tree, svm
 from collections import Counter
 from collections import defaultdict
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, classification_report
 from sklearn.model_selection import train_test_split
 from ica_process import over_sampling, SMOTE_over_sampling
+from read_training_test_set import read_data_from_file
 
-trainset_size = 0.8
+trainset_size = 0.1
 print 'training set size', trainset_size
 run_times = 1
 iterations = 20
@@ -22,7 +23,6 @@ attributes_name = ['reviewerID', 'friends_num', 'reviews_num', 'photo_num', 'neu
 # attributes_name = ['reviewerID',]
 
 
-#  divide data by training set and test set
 def split_tarinset_testset(graph, attributes):
     print
     print "split train set and test set "
@@ -48,7 +48,17 @@ def split_tarinset_testset(graph, attributes):
     return X_train, X_test, Y_train, Y_test
 
 
-#  remove the test set label on the graph data
+def load_trainingset_testset_from_file(training_size):
+    tr_path = 'train_test_data_set/%s/training_set.csv' % training_size
+    tr_label_path = 'train_test_data_set/%s/label_training_set.csv' % training_size
+    te_path = 'train_test_data_set/%s/test_set.csv' % training_size
+    te_label_path = 'train_test_data_set/%s/label_test_set.csv' % training_size
+
+    tr, tr_label, te, te_label = read_data_from_file(tr_path, tr_label_path, te_path, te_label_path)
+
+    return tr.tolist(), tr_label.tolist(), te.tolist(), te_label.tolist()
+
+
 def remove_test_label(graph, delete_list):
     print
     print "remove test set label"
@@ -60,7 +70,6 @@ def remove_test_label(graph, delete_list):
     return current_graph
 
 
-# compute attributes according to current network
 def compute_attribute(current_graph, node):
     neighbors = current_graph.neighbors(node)
     number_of_spammers = 0
@@ -86,12 +95,14 @@ recall_sum = 0
 
 for round_num in range(run_times):
     # split
-    X_train, X_test, Y_train, Y_test = split_tarinset_testset(graph, attributes_name)
-
+    # X_train, X_test, Y_train, Y_test =
+    X_train, Y_train, X_test, Y_test = load_trainingset_testset_from_file(trainset_size)
     # remove label of nodes in test set
     current_graph = remove_test_label(graph, X_test)
 
-    ###########################
+    ######################################################
+    # add relational attributes
+
     zero_zero_num = 0
     for l in X_train:
         node_id = l[0]
@@ -125,19 +136,16 @@ for round_num in range(run_times):
         l.append(number_of_spammers)
         l.append(number_of_non_spammers)
 
-    #############################################3
+    #############################################
+
     print X_train[0:5]
 
     X_train_without_id = [node[1:] for node in X_train]
 
-    print
-    print "training classifier"
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-
     # over sampling
     # X_train_without_id, Y_train = SMOTE_over_sampling(X_train_without_id, Y_train)
 
-    classifier = tree.DecisionTreeClassifier(criterion="entropy", random_state=shuffle_stat)
+    classifier = tree.DecisionTreeClassifier(random_state=shuffle_stat)
     # classifier = svm.SVC()
     classifier.fit(X_train_without_id, Y_train)
 
@@ -147,31 +155,13 @@ for round_num in range(run_times):
     # model_path = 'decision_tree_result/decision_tree_model42.sav'
     # classifier = pickle.load(open(model_path, 'rb'))
 
-    print
-    print "complete training"
-    print time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time()))
-
     Y_predict = list()
     for X_single in X_test:
         X = copy.deepcopy(X_single)
         node_id = X[0]
         label_predict = classifier.predict([X[1:]])
-        Y_predict.append(int(label_predict))
+        Y_predict.append(label_predict)
 
-    # print current_graph.node[node_id]
-    micro = f1_score(Y_test, Y_predict, average='micro')
-    macro = f1_score(Y_test, Y_predict, average='macro')
-    recall_rate = recall_score(Y_test, Y_predict, average='binary')
+    print classification_report(y_true=Y_test, y_pred=Y_predict, digits=4)
 
-    print
-    print "f1 macro is", macro
-    print "f1 micro is", micro
-    print "recall rate is", recall_rate
-    recall_sum += recall_rate
-    macro_sum += macro
-    micro_sum += micro
 
-print
-print 'average_recall:', recall_sum/run_times
-print 'average_macro:', macro_sum/run_times
-print 'average_micro:', micro_sum/run_times
